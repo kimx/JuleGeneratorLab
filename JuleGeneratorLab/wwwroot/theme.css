@@ -1,98 +1,49 @@
 :root {
-    --ocean-primary: #0077cc; /* A clear, medium blue */
-    --ocean-primary-rgb: 0,119,204; /* RGB for use in rgba */
-    --ocean-secondary: #6c757d;
-    --ocean-light: #f8f9fa;
-    --ocean-dark: #343a40;
-    --ocean-accent: #17a2b8;
-    --ocean-white: #ffffff;
-    --ocean-body-bg: var(--ocean-light);
-    --ocean-body-color: var(--ocean-dark);
-    --ocean-link-color: var(--ocean-primary);
-    --ocean-link-hover-color: #005fa3; /* Darker primary for hover */
-    --sidebar-bg: #e9ecef; /* Light gray for sidebar */
+    --ocean-primary: #0A4D68; /* Dark Slate Blue */
+    --ocean-primary-rgb: 10,77,104; /* RGB for #0A4D68 */
+    --ocean-secondary: #4F6F52; /* Dark Olive Green/Gray */
+    --ocean-light: #D3D3D3;    /* Light Gray - will be used less for main bg */
+    --ocean-dark: #1e1e1e;     /* Very Dark Gray/Almost Black - for backgrounds */
+    --ocean-accent: #088395;   /* Tealish Blue */
+    --ocean-white: #ffffff;    /* White for text */
+
+    /* Dark Theme Specific */
+    --ocean-body-bg: var(--ocean-dark);
+    --ocean-body-color: var(--ocean-light); /* Light text on dark background */
+    --ocean-heading-color: var(--ocean-accent);
+    --ocean-link-color: var(--ocean-accent);
+    --ocean-link-hover-color: #0CB0C2; /* Lighter teal for hover */
+    --sidebar-bg-start: #053B50; /* Darker part of gradient */
+    --sidebar-bg-end: #0A4D68;   /* Lighter part of gradient, matches primary */
+    --navbar-bg: var(--ocean-primary);
+    --navbar-link-color: var(--ocean-light);
+    --navbar-link-hover-color: var(--ocean-white);
+    --navbar-brand-color: var(--ocean-white);
+
+    --button-primary-bg: var(--ocean-primary);
+    --button-primary-hover-bg: #0E607F; /* Slightly lighter/more saturated primary for hover */
+    --button-primary-text: var(--ocean-white);
+
+    --button-secondary-bg: var(--ocean-secondary);
+    --button-secondary-hover-bg: #648267; /* Slightly lighter secondary */
+    --button-secondary-text: var(--ocean-white);
 }
 
+/* Update body to use new dark theme variables */
 body {
-    background-color: var(--ocean-body-bg);
-    color: var(--ocean-body-color);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important; /* Override app.css font */
+    background-color: var(--ocean-body-bg) !important;
+    color: var(--ocean-body-color) !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
 }
 
-/* Navbar / NavMenu .top-row styling */
-/* This targets the .top-row inside an element with class .nav-menu (typical for NavMenu component)
-   or a general .navbar class if that's used for the main navigation bar */
-.nav-menu .top-row, /* If NavMenu.razor's root div has class "nav-menu" */
-.sidebar .top-row, /* More specific for top-row in sidebar if NavMenu is inside sidebar */
-.navbar-dark.top-row, /* If the top-row has navbar-dark class */
-.navbar {
-    background-color: var(--ocean-primary) !important; /* Ensure theme color is applied */
-    border-bottom: 1px solid var(--ocean-link-hover-color);
+/* Update headings */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--ocean-heading-color);
 }
 
-.navbar .navbar-brand,
-.nav-menu .top-row .navbar-brand, /* Specificity for brand in NavMenu's top row */
-.sidebar .top-row .navbar-brand {
-    color: var(--ocean-white) !important;
-}
-
-.navbar .nav-link,
-.nav-menu .nav-item ::deep .nav-link, /* Target Blazor's generated NavLink */
-.sidebar .nav-item ::deep .nav-link { /* Target Blazor's generated NavLink within sidebar */
-    color: #d1ecf1 !important; /* Light cyan/blue, slightly less bright than pure white for nav links */
-    background: none !important;
-    border: none !important;
-}
-
-.navbar .nav-link:hover,
-.nav-menu .nav-item ::deep .nav-link:hover,
-.sidebar .nav-item ::deep .nav-link:hover {
-    color: var(--ocean-white) !important;
-    background-color: rgba(255,255,255,0.1) !important; /* Subtle hover from NavMenu.razor.css */
-}
-
-.navbar .nav-link.active,
-.nav-menu .nav-item ::deep a.active, /* Target Blazor's active NavLink */
-.sidebar .nav-item ::deep a.active {
-    background-color: rgba(255,255,255,0.2) !important; /* Slightly more emphasis than hover */
-    color: var(--ocean-white) !important;
-    font-weight: bold;
-}
-
-/* Sidebar styling from MainLayout.razor.css */
-.sidebar {
-    background-image: none !important; /* Remove existing gradient */
-    background-color: var(--sidebar-bg) !important; /* Apply theme sidebar color */
-}
-
-/* Button styling */
-.btn-primary {
-    background-color: var(--ocean-primary) !important;
-    border-color: var(--ocean-primary) !important;
-    color: var(--ocean-white) !important;
-}
-
-.btn-primary:hover {
-    background-color: var(--ocean-link-hover-color) !important;
-    border-color: var(--ocean-link-hover-color) !important;
-    color: var(--ocean-white) !important;
-}
-
-.btn-secondary {
-    background-color: var(--ocean-secondary) !important; /* Ensure app.css is overridden if needed */
-    border-color: var(--ocean-secondary) !important;
-    color: var(--ocean-white) !important;
-}
-
-.btn-secondary:hover {
-    background-color: #5a6268 !important;
-    border-color: #545b62 !important;
-    color: var(--ocean-white) !important;
-}
-
-/* Link styling */
-a, .btn-link { /* General links and btn-link class from app.css */
-    color: var(--ocean-link-color) !important; /* Override app.css link color */
+/* Update general links */
+a, .btn-link {
+    color: var(--ocean-link-color) !important;
 }
 
 a:hover, .btn-link:hover {
@@ -100,26 +51,135 @@ a:hover, .btn-link:hover {
     text-decoration: none;
 }
 
-/* Headings */
-h1, h2, h3, h4, h5, h6 {
-    color: var(--ocean-primary); /* Theme heading color */
+/* Update Navbar specific styles */
+.nav-menu .top-row,
+.sidebar .top-row,
+.navbar-dark.top-row,
+.navbar {
+    background-color: var(--navbar-bg) !important;
+    border-bottom: 1px solid var(--ocean-primary); /* Use primary, or a slightly lighter/darker shade */
 }
 
-/* Focus indicator from app.css, themed */
+.navbar .navbar-brand,
+.nav-menu .top-row .navbar-brand,
+.sidebar .top-row .navbar-brand {
+    color: var(--navbar-brand-color) !important;
+}
+
+.navbar .nav-link,
+.nav-menu .nav-item ::deep .nav-link {
+    color: var(--navbar-link-color) !important;
+    background: none !important;
+    border: none !important;
+}
+
+.navbar .nav-link:hover,
+.nav-menu .nav-item ::deep .nav-link:hover {
+    color: var(--navbar-link-hover-color) !important;
+    background-color: rgba(255,255,255,0.05) !important; /* Very subtle white hover for dark theme */
+}
+
+.navbar .nav-link.active,
+.nav-menu .nav-item ::deep a.active {
+    background-color: rgba(255,255,255,0.1) !important; /* Slightly more emphasis for active */
+    color: var(--ocean-white) !important; /* Ensure active link text is bright */
+    font-weight: bold;
+}
+
+/* Sidebar styling from MainLayout.razor.css */
+.sidebar {
+    background-image: linear-gradient(180deg, var(--sidebar-bg-start) 0%, var(--sidebar-bg-end) 100%) !important; /* Dark gradient */
+    background-color: var(--sidebar-bg-start) !important; /* Fallback if gradient isn't supported, or base for gradient */
+}
+
+/* Ensure NavLink text color in the sidebar has enough contrast against the new gradient */
+.sidebar .nav-item ::deep .nav-link {
+    color: var(--navbar-link-color) !important; /* Re-evaluate this based on the gradient. --navbar-link-color is --ocean-light */
+    background: none !important; /* Explicitly keep background none */
+    border: none !important; /* Explicitly keep border none */
+}
+
+.sidebar .nav-item ::deep .nav-link:hover {
+    color: var(--navbar-link-hover-color) !important; /* --ocean-white */
+    background-color: rgba(255,255,255,0.07) !important; /* Slightly more pronounced hover on darker gradient */
+}
+
+.sidebar .nav-item ::deep a.active {
+    background-color: rgba(255,255,255,0.15) !important; /* More pronounced active state */
+    color: var(--ocean-white) !important;
+    font-weight: bold;
+}
+
+/* Styling for the main content area's .top-row (from MainLayout.razor.css) */
+/* Assuming 'main' is the container for the content area where this .top-row resides */
+main > .top-row { /* Make this selector more specific if possible, e.g., based on a parent class in MainLayout */
+    background-color: var(--ocean-primary) !important; /* Using a dark color from the theme */
+    border-bottom: 1px solid var(--ocean-link-hover-color) !important; /* A slightly different border */
+}
+
+main > .top-row a,
+main > .top-row .btn-link {
+    color: var(--navbar-link-color) !important; /* Light color for links */
+    text-decoration: none !important;
+}
+
+main > .top-row a:hover,
+main > .top-row .btn-link:hover {
+    color: var(--navbar-link-hover-color) !important; /* Even lighter/white for hover */
+    text-decoration: underline !important;
+}
+
+/* Update Button styling */
+.btn-primary {
+    background-color: var(--button-primary-bg) !important;
+    border-color: var(--button-primary-bg) !important; /* Border same as background */
+    color: var(--button-primary-text) !important;
+}
+
+.btn-primary:hover {
+    background-color: var(--button-primary-hover-bg) !important;
+    border-color: var(--button-primary-hover-bg) !important;
+    color: var(--button-primary-text) !important;
+}
+
+.btn-secondary {
+    background-color: var(--button-secondary-bg) !important;
+    border-color: var(--button-secondary-bg) !important;
+    color: var(--button-secondary-text) !important;
+}
+
+.btn-secondary:hover {
+    background-color: var(--button-secondary-hover-bg) !important;
+    border-color: var(--button-secondary-hover-bg) !important;
+    color: var(--button-secondary-text) !important;
+}
+
+/* Update Focus indicator to use the new primary color */
 .btn:focus, .btn:active:focus,
 .btn-link.nav-link:focus,
 .form-control:focus,
 .form-check-input:focus {
-  box-shadow: 0 0 0 0.25rem rgba(var(--ocean-primary-rgb), .5) !important; /* Use primary color with 50% opacity */
+  box-shadow: 0 0 0 0.25rem rgba(var(--ocean-primary-rgb), .5) !important;
 }
 
-/* Specific overrides for NavMenu.razor.css elements if needed */
-.navbar-toggler { /* From NavMenu.razor.css */
+/* Update Navbar Toggler for dark theme */
+.navbar-toggler {
     color: var(--ocean-white) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important; /* Lighter border */
-    background: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.85%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") no-repeat center/1.75rem rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    /* SVG icon color needs to be white for dark backgrounds. The current SVG uses stroke='rgba(255, 255, 255, 0.85%)' which is good. */
+    /* background image already uses a whiteish stroke, so it might be fine */
 }
 
 .navbar-toggler:checked {
-    background-color: rgba(255, 255, 255, 0.3) !important; /* Slightly more visible when checked */
+    background-color: rgba(255, 255, 255, 0.15) !important; /* Adjust checked state for dark theme */
+}
+
+/* You may need to adjust selectors based on your actual HTML structure */
+/* For example, the NavMenu component might have specific classes */
+.navmenu-container .nav-link { /* Example if NavMenu.razor uses a container with this class */
+    /* color: var(--ocean-accent); */ /* Or another color if you want nav links different from body links */
+}
+
+.navmenu-container .nav-link:hover {
+    /* color: var(--ocean-link-hover-color); */
 }
