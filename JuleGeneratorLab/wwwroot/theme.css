@@ -1,77 +1,76 @@
 :root {
-    /* Purple Theme */
-    --purple-primary: #6A0DAD; /* A rich, medium purple */
-    --purple-primary-rgb: 106,13,173;
-    --purple-secondary: #9370DB; /* Medium Slate Blue / Lighter Purple */
-    --purple-secondary-rgb: 147,112,219;
+    /* Deeper Purple Theme */
+    --purple-primary: #4B0082; /* Indigo - Deeper primary purple */
+    --purple-primary-rgb: 75,0,130;
+    --purple-secondary: #800080; /* Purple (standard) - Deeper secondary */
+    --purple-secondary-rgb: 128,0,128;
 
-    --purple-dark-bg: #301934; /* Deep Indigo/Plum for dark backgrounds if needed */
-    --purple-light-bg: #E6E6FA;   /* Lavender - for light backgrounds */
-    --purple-content-bg: #FFFFFF; /* White for main content area for readability */
+    --purple-light-bg: #F0E6FF;   /* Slightly richer Lavender for light backgrounds */
+    --purple-content-bg: #FFFFFF; /* White for main content area */
 
-    --purple-text-on-dark: #F3E5F5;  /* Light lavender/off-white for text on dark purple backgrounds */
-    --purple-text-on-light: #212529; /* Standard dark text for light/white backgrounds */
-    --purple-accent: #DDA0DD;     /* Plum / Light orchid - for accents */
-    --purple-accent-hover: #BA55D3; /* Medium Orchid - darker accent for hover */
+    --purple-text-on-dark: #EDE7F6;  /* Lighter, slightly desaturated purple/off-white for text on dark purple */
+    --purple-text-on-light: #1A1A1A; /* Very dark gray for text on light/white backgrounds */
+    --purple-accent: #C39BD3;     /* Light purple / lilac for accents */
+    --purple-accent-hover: #AB82C5; /* Darker lilac for hover */
     --purple-white: #ffffff;
     --purple-white-rgb: 255,255,255;
-    --purple-dark-text-rgb: 33,37,41; /* For consistency if needed */
+    --purple-dark-text-rgb: 26,26,26; /* Corresponds to #1A1A1A */
 
     /* Theme variable setup */
-    --main-content-bg: var(--purple-content-bg); /* White main content */
-    --ocean-body-bg: var(--purple-light-bg);    /* Light lavender overall page bg */
+    --main-content-bg: var(--purple-content-bg);
+    --ocean-body-bg: var(--purple-light-bg);
     --ocean-body-color: var(--purple-text-on-light);
     --ocean-heading-color: var(--purple-primary);
     --ocean-link-color: var(--purple-secondary);
     --ocean-link-hover-color: var(--purple-primary);
 
-    /* Sidebar - Purple theme */
-    --sidebar-bg-start: var(--purple-primary); /* Primary purple */
-    --sidebar-bg-end: var(--purple-secondary);   /* Lighter purple for gradient */
+    /* Sidebar - Deeper Purple theme */
+    --sidebar-bg-start: var(--purple-primary);
+    --sidebar-bg-end: #5D00A7;   /* Slightly lighter than primary for gradient end */
     --sidebar-link-color: var(--purple-text-on-dark);
     --sidebar-link-hover-bg: rgba(255,255,255,0.1);
-    --sidebar-active-bg: rgba(255,255,255,0.2);
+    --sidebar-active-bg: rgba(255,255,255,0.15); /* Slightly more pronounced than hover */
     --sidebar-active-text-color: var(--purple-white);
 
-    /* Navbar / Main Top Row - Purple theme */
+    /* Navbar / Main Top Row - Deeper Purple theme */
     --navbar-bg: var(--purple-primary);
     --navbar-link-color: var(--purple-text-on-dark);
-    --navbar-link-hover-color: var(--purple-white);
-    --navbar-brand-color: var(--purple-white);
-    --navbar-border-color: #4B0082; /* Indigo - darker shade of primary for border */
+    --navbar-link-hover-color: var(--purple-white); /* Brighter white for hover on dark purple */
+    --navbar-brand-color: var(--purple-white); /* White brand for contrast */
+    --navbar-border-color: #3A006A; /* Even darker shade of primary for border */
 
-    /* Buttons - Purple theme */
+    /* Buttons - Deeper Purple theme */
     --button-primary-bg: var(--purple-primary);
-    --button-primary-hover-bg: #800080; /* Purple (standard) - slightly different shade for hover */
+    --button-primary-hover-bg: #5D00A7; /* Slightly lighter than primary for hover */
     --button-primary-text: var(--purple-white);
 
     --button-secondary-bg: var(--purple-secondary);
-    --button-secondary-hover-bg: #8A2BE2; /* Blue Violet for hover */
+    --button-secondary-hover-bg: #9932CC; /* Dark Orchid - richer hover for secondary */
     --button-secondary-text: var(--purple-white);
 }
 
 /* Foundational style updates */
 body {
-    background-color: var(--ocean-body-bg) !important; /* Light lavender page background */
-    color: var(--ocean-body-color) !important; /* Dark text */
+    background-color: var(--ocean-body-bg) !important;
+    color: var(--ocean-body-color) !important;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
 }
 main {
-    background-color: var(--main-content-bg) !important; /* White main content background */
+    background-color: var(--main-content-bg) !important;
 }
 h1, h2, h3, h4, h5, h6 {
-    color: var(--ocean-heading-color); /* Primary purple headings */
+    color: var(--ocean-heading-color);
 }
 
 /* General links in main content area */
 main a, main .btn-link {
-    color: var(--ocean-link-color) !important; /* Secondary purple links */
+    color: var(--ocean-link-color) !important;
 }
 main a:hover, main .btn-link:hover {
-    color: var(--ocean-link-hover-color) !important; /* Primary purple on hover */
+    color: var(--ocean-link-hover-color) !important;
 }
 
-/* Update Navbar/Main Top Row specific styles for Purple theme */
+/* Update Navbar/Main Top Row specific styles for Deeper Purple theme */
 .nav-menu .top-row,
 .sidebar .top-row,
 .navbar-dark.top-row,
@@ -114,7 +113,7 @@ main > .top-row a.active {
     background-color: var(--sidebar-active-bg) !important; /* Consistent active with sidebar links */
 }
 
-/* Sidebar NavLinks (distinct from top-row links in sidebar) - Purple Theme */
+/* Sidebar NavLinks (distinct from top-row links in sidebar) - Deeper Purple Theme */
 .sidebar .nav-item ::deep .nav-link {
     color: var(--sidebar-link-color) !important;
     background: none !important;
@@ -136,7 +135,7 @@ main > .top-row a.active {
     background-color: var(--sidebar-bg-start) !important; /* Fallback */
 }
 
-/* Update Button styling for Purple theme */
+/* Update Button styling for Deeper Purple theme */
 .btn-primary {
     background-color: var(--button-primary-bg) !important;
     border-color: var(--button-primary-bg) !important;
@@ -159,24 +158,24 @@ main > .top-row a.active {
     color: var(--button-secondary-text) !important;
 }
 
-/* Navbar Toggler icon for purple background */
+/* Navbar Toggler icon for deeper purple background */
 .navbar-toggler-icon {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(var(--purple-white-rgb), 0.75)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(var(--purple-white-rgb), 0.85)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important; /* Brighter stroke for toggler */
 }
 .navbar-toggler {
-    border-color: rgba(var(--purple-white-rgb), 0.25) !important;
-    color: rgba(var(--purple-white-rgb), 0.75) !important;
+    border-color: rgba(var(--purple-white-rgb), 0.3) !important; /* Slightly more visible border */
+    color: rgba(var(--purple-white-rgb), 0.85) !important;
 }
 .navbar-toggler:checked {
-    background-color: rgba(var(--purple-white-rgb), 0.1) !important;
+    background-color: rgba(var(--purple-white-rgb), 0.15) !important; /* More visible checked state */
 }
 
-/* Focus indicator with purple primary */
+/* Focus indicator with deeper purple primary */
 .btn:focus, .btn:active:focus,
 .btn-link.nav-link:focus,
 .form-control:focus,
 .form-check-input:focus {
-  box-shadow: 0 0 0 0.25rem rgba(var(--purple-primary-rgb), .25) !important;
+  box-shadow: 0 0 0 0.25rem rgba(var(--purple-primary-rgb), .35) !important; /* Slightly more opaque shadow */
 }
 
 /* Placeholder for NavMenu container specific styles if needed later */
