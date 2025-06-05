@@ -1,4 +1,6 @@
 using JuleGeneratorLab.Components;
+using JuleGeneratorLab.Models;
+using JuleGeneratorLab.Services;
 
 namespace JuleGeneratorLab
 {
@@ -7,9 +9,6 @@ namespace JuleGeneratorLab
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
-using JuleGeneratorLab.Models;
-using JuleGeneratorLab.Services;
 
             // Add services to the container.
             builder.Services.AddRazorComponents()
