@@ -1,0 +1,125 @@
+:root {
+    --ocean-primary: #0077cc; /* A clear, medium blue */
+    --ocean-primary-rgb: 0,119,204; /* RGB for use in rgba */
+    --ocean-secondary: #6c757d;
+    --ocean-light: #f8f9fa;
+    --ocean-dark: #343a40;
+    --ocean-accent: #17a2b8;
+    --ocean-white: #ffffff;
+    --ocean-body-bg: var(--ocean-light);
+    --ocean-body-color: var(--ocean-dark);
+    --ocean-link-color: var(--ocean-primary);
+    --ocean-link-hover-color: #005fa3; /* Darker primary for hover */
+    --sidebar-bg: #e9ecef; /* Light gray for sidebar */
+}
+
+body {
+    background-color: var(--ocean-body-bg);
+    color: var(--ocean-body-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important; /* Override app.css font */
+}
+
+/* Navbar / NavMenu .top-row styling */
+/* This targets the .top-row inside an element with class .nav-menu (typical for NavMenu component)
+   or a general .navbar class if that's used for the main navigation bar */
+.nav-menu .top-row, /* If NavMenu.razor's root div has class "nav-menu" */
+.sidebar .top-row, /* More specific for top-row in sidebar if NavMenu is inside sidebar */
+.navbar-dark.top-row, /* If the top-row has navbar-dark class */
+.navbar {
+    background-color: var(--ocean-primary) !important; /* Ensure theme color is applied */
+    border-bottom: 1px solid var(--ocean-link-hover-color);
+}
+
+.navbar .navbar-brand,
+.nav-menu .top-row .navbar-brand, /* Specificity for brand in NavMenu's top row */
+.sidebar .top-row .navbar-brand {
+    color: var(--ocean-white) !important;
+}
+
+.navbar .nav-link,
+.nav-menu .nav-item ::deep .nav-link, /* Target Blazor's generated NavLink */
+.sidebar .nav-item ::deep .nav-link { /* Target Blazor's generated NavLink within sidebar */
+    color: #d1ecf1 !important; /* Light cyan/blue, slightly less bright than pure white for nav links */
+    background: none !important;
+    border: none !important;
+}
+
+.navbar .nav-link:hover,
+.nav-menu .nav-item ::deep .nav-link:hover,
+.sidebar .nav-item ::deep .nav-link:hover {
+    color: var(--ocean-white) !important;
+    background-color: rgba(255,255,255,0.1) !important; /* Subtle hover from NavMenu.razor.css */
+}
+
+.navbar .nav-link.active,
+.nav-menu .nav-item ::deep a.active, /* Target Blazor's active NavLink */
+.sidebar .nav-item ::deep a.active {
+    background-color: rgba(255,255,255,0.2) !important; /* Slightly more emphasis than hover */
+    color: var(--ocean-white) !important;
+    font-weight: bold;
+}
+
+/* Sidebar styling from MainLayout.razor.css */
+.sidebar {
+    background-image: none !important; /* Remove existing gradient */
+    background-color: var(--sidebar-bg) !important; /* Apply theme sidebar color */
+}
+
+/* Button styling */
+.btn-primary {
+    background-color: var(--ocean-primary) !important;
+    border-color: var(--ocean-primary) !important;
+    color: var(--ocean-white) !important;
+}
+
+.btn-primary:hover {
+    background-color: var(--ocean-link-hover-color) !important;
+    border-color: var(--ocean-link-hover-color) !important;
+    color: var(--ocean-white) !important;
+}
+
+.btn-secondary {
+    background-color: var(--ocean-secondary) !important; /* Ensure app.css is overridden if needed */
+    border-color: var(--ocean-secondary) !important;
+    color: var(--ocean-white) !important;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268 !important;
+    border-color: #545b62 !important;
+    color: var(--ocean-white) !important;
+}
+
+/* Link styling */
+a, .btn-link { /* General links and btn-link class from app.css */
+    color: var(--ocean-link-color) !important; /* Override app.css link color */
+}
+
+a:hover, .btn-link:hover {
+    color: var(--ocean-link-hover-color) !important;
+    text-decoration: none;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--ocean-primary); /* Theme heading color */
+}
+
+/* Focus indicator from app.css, themed */
+.btn:focus, .btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
+  box-shadow: 0 0 0 0.25rem rgba(var(--ocean-primary-rgb), .5) !important; /* Use primary color with 50% opacity */
+}
+
+/* Specific overrides for NavMenu.razor.css elements if needed */
+.navbar-toggler { /* From NavMenu.razor.css */
+    color: var(--ocean-white) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important; /* Lighter border */
+    background: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.85%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") no-repeat center/1.75rem rgba(255, 255, 255, 0.1) !important;
+}
+
+.navbar-toggler:checked {
+    background-color: rgba(255, 255, 255, 0.3) !important; /* Slightly more visible when checked */
+}
