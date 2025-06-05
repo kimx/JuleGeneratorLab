@@ -1,0 +1,208 @@
+:root {
+    /* Artistic Deep Purple Theme */
+    --purple-primary: #3B006D; /* Very Deep Violet/Indigo */
+    --purple-primary-rgb: 59,0,109;
+    --purple-secondary: #5A005A; /* Deep Magenta/Plum */
+    --purple-secondary-rgb: 90,0,90;
+
+    --purple-page-bg: #2C2A3A;   /* Very Dark Desaturated Violet for overall page background */
+    --purple-content-bg: #FFFFFF; /* White for main content area */
+
+    --purple-text-on-dark: #EAE6F0;  /* Off-white with a hint of lavender */
+    --purple-text-on-light: #121212; /* Near black for max contrast on white */
+
+    --purple-artistic-accent: #B8860B; /* DarkGoldenRod - Muted Gold/Ochre */
+    --purple-artistic-accent-rgb: 184,134,11;
+    --purple-artistic-accent-hover: #DAA520; /* GoldenRod - slightly brighter gold for hover */
+
+    --purple-white: #ffffff;
+    --purple-white-rgb: 255,255,255;
+    --purple-dark-text-rgb: 18,18,18; /* Corresponds to #121212 */
+
+    /* Theme variable setup */
+    --main-content-bg: var(--purple-content-bg);
+    --ocean-body-bg: var(--purple-page-bg);
+    --ocean-body-color: var(--purple-text-on-light); /* Default text for light content bg */
+
+    --ocean-heading-color: var(--purple-primary);
+    --ocean-link-color: var(--purple-secondary);
+    --ocean-link-hover-color: var(--purple-primary);
+
+    /* Sidebar - Artistic Deep Purple */
+    --sidebar-bg-start: var(--purple-primary);
+    --sidebar-bg-end: #4A0052;   /* Slightly different deep purple for gradient end */
+    --sidebar-link-color: var(--purple-text-on-dark);
+    --sidebar-link-hover-bg: rgba(var(--purple-artistic-accent-rgb), 0.15); /* Goldish hover bg */
+    --sidebar-active-bg: rgba(var(--purple-artistic-accent-rgb), 0.25);
+    --sidebar-active-text-color: var(--purple-artistic-accent); /* Gold text for active */
+
+    /* Navbar / Main Top Row - Artistic Deep Purple */
+    --navbar-bg: var(--purple-primary);
+    --navbar-link-color: var(--purple-text-on-dark);
+    --navbar-link-hover-color: var(--purple-artistic-accent); /* Gold hover for links */
+    --navbar-brand-color: var(--purple-white); /* White for brand */
+    --navbar-border-color: #2A004D; /* Even darker shade of primary for border */
+
+    /* Buttons - Artistic Deep Purple */
+    --button-primary-bg: var(--purple-primary);
+    --button-primary-hover-bg: #4A0052;
+    --button-primary-text: var(--purple-text-on-dark);
+
+    --button-secondary-bg: var(--purple-secondary);
+    --button-secondary-hover-bg: #6B006B;
+    --button-secondary-text: var(--purple-text-on-dark);
+
+    --button-info-bg: #D1C4E9; /* Light Lavender/Pale Purple */
+    --button-info-hover-bg: #B39DDB; /* Slightly darker/more saturated Lavender */
+    --button-info-text: var(--purple-text-on-light); /* Dark text for contrast on light purple */
+}
+
+/* Foundational style updates */
+body {
+    background-color: var(--ocean-body-bg) !important; /* Dark desaturated violet page bg */
+    color: var(--ocean-body-color) !important; /* This is dark text, mainly for main content */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+main {
+    background-color: var(--main-content-bg) !important; /* White main content */
+    color: var(--purple-text-on-light) !important; /* Ensure main content text is dark */
+}
+h1, h2, h3, h4, h5, h6 { /* Headings in main content */
+    color: var(--ocean-heading-color); /* Deep purple primary */
+}
+
+/* General links in main content area */
+main a, main .btn-link {
+    color: var(--ocean-link-color) !important; /* Deep purple secondary */
+}
+main a:hover, main .btn-link:hover {
+    color: var(--ocean-link-hover-color) !important; /* Deep purple primary on hover */
+}
+
+/* Update Navbar/Main Top Row specific styles for Artistic Deep Purple theme */
+.nav-menu .top-row,
+.sidebar .top-row,
+.navbar-dark.top-row,
+.navbar,
+main > .top-row {
+    background-color: var(--navbar-bg) !important;
+    border-bottom: 1px solid var(--navbar-border-color) !important;
+}
+
+.navbar .navbar-brand,
+.nav-menu .top-row .navbar-brand,
+.sidebar .top-row .navbar-brand,
+main > .top-row .navbar-brand {
+    color: var(--navbar-brand-color) !important;
+}
+
+/* Links in Navbar / NavMenu's top row / Main content top row */
+.navbar .nav-link,
+.nav-menu .top-row .nav-link,
+.sidebar .top-row .nav-link, /* Links in the top part of the sidebar */
+main > .top-row a,
+main > .top-row .btn-link {
+    color: var(--navbar-link-color) !important;
+    background-color: transparent !important;
+}
+.navbar .nav-link:hover,
+.nav-menu .top-row .nav-link:hover,
+.sidebar .top-row .nav-link:hover,
+main > .top-row a:hover,
+main > .top-row .btn-link:hover {
+    color: var(--navbar-link-hover-color) !important;
+    background-color: var(--sidebar-link-hover-bg) !important; /* Consistent hover with sidebar links (goldish) */
+}
+.navbar .nav-link.active,
+.nav-menu .top-row .nav-link.active,
+.sidebar .top-row .nav-link.active,
+main > .top-row a.active {
+    color: var(--purple-artistic-accent) !important;  /* Gold text for active */
+    font-weight: bold;
+    background-color: var(--sidebar-active-bg) !important; /* Consistent active with sidebar links (goldish) */
+}
+
+/* Sidebar NavLinks (distinct from top-row links in sidebar) - Artistic Deep Purple Theme */
+.sidebar .nav-item ::deep .nav-link {
+    color: var(--sidebar-link-color) !important;
+    background: none !important;
+    border: none !important;
+}
+.sidebar .nav-item ::deep .nav-link:hover {
+    color: var(--purple-artistic-accent-hover) !important;  /* Brighter gold text on hover */
+    background-color: var(--sidebar-link-hover-bg) !important;
+}
+.sidebar .nav-item ::deep a.active {
+    background-color: var(--sidebar-active-bg) !important;
+    color: var(--sidebar-active-text-color) !important;
+    font-weight: bold;
+}
+
+/* Sidebar styling from MainLayout.razor.css - Gradient update */
+.sidebar {
+    background-image: linear-gradient(180deg, var(--sidebar-bg-start) 0%, var(--sidebar-bg-end) 100%) !important;
+    background-color: var(--sidebar-bg-start) !important; /* Fallback */
+}
+
+/* Update Button styling for Artistic Deep Purple theme */
+.btn-primary {
+    background-color: var(--button-primary-bg) !important;
+    border-color: var(--button-primary-bg) !important;
+    color: var(--button-primary-text) !important;
+}
+.btn-primary:hover {
+    background-color: var(--button-primary-hover-bg) !important;
+    border-color: var(--button-primary-hover-bg) !important;
+    color: var(--button-primary-text) !important;
+}
+
+.btn-secondary {
+    background-color: var(--button-secondary-bg) !important;
+    border-color: var(--button-secondary-bg) !important;
+    color: var(--button-secondary-text) !important;
+}
+.btn-secondary:hover {
+    background-color: var(--button-secondary-hover-bg) !important;
+    border-color: var(--button-secondary-hover-bg) !important;
+    color: var(--button-secondary-text) !important;
+}
+
+.btn-info {
+    background-color: var(--button-info-bg) !important;
+    border-color: var(--button-info-bg) !important;
+    color: var(--button-info-text) !important;
+}
+.btn-info:hover {
+    background-color: var(--button-info-hover-bg) !important;
+    border-color: var(--button-info-hover-bg) !important;
+    color: var(--button-info-text) !important;
+}
+
+/* Navbar Toggler icon for deep purple background */
+.navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(var(--purple-artistic-accent-rgb), 0.85)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important; /* Goldish toggler */
+}
+.navbar-toggler {
+    border-color: rgba(var(--purple-artistic-accent-rgb), 0.4) !important;
+    color: rgba(var(--purple-artistic-accent-rgb), 0.85) !important;
+}
+.navbar-toggler:checked {
+    background-color: rgba(var(--purple-artistic-accent-rgb), 0.15) !important;
+}
+
+/* Focus indicator with artistic deep purple primary */
+.btn:focus, .btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
+  box-shadow: 0 0 0 0.25rem rgba(var(--purple-primary-rgb), .45) !important; /* More visible shadow */
+}
+
+/* Placeholder for NavMenu container specific styles if needed later */
+.navmenu-container .nav-link {
+    /* color: var(--ocean-accent); */
+}
+
+.navmenu-container .nav-link:hover {
+    /* color: var(--ocean-link-hover-color); */
+}
