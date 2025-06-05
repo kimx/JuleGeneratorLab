@@ -1,0 +1,167 @@
+@page "/dbconnections"
+@using JuleGeneratorLab.Models
+@using JuleGeneratorLab.Services
+@inject DatabaseConnectionService DbConnectionSvc
+@inject NavigationManager NavigationMgr
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Database Connection Manager</PageTitle>
+
+<h1><i class="bi bi-plug-fill me-2"></i>Database Connection Manager</h1>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="ShowAddConnectionModal">
+        <i class="bi bi-plus-circle-fill me-1"></i> Add New Connection
+    </button>
+</div>
+
+@if (connections == null)
+{
+    <p><em>Loading connections...</em></p>
+}
+else if (!connections.Any())
+{
+    <div class="alert alert-info" role="alert">
+        No database connections found. Click "Add New Connection" to get started.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Name</th>
+                    <th>Connection String</th>
+                    <th>Database Type</th>
+                    <th>Last Updated</th>
+                    <th style="width: 150px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var conn in connections)
+                {
+                    <tr>
+                        <td>@conn.Name</td>
+                        <td>
+                            @if (!string.IsNullOrWhiteSpace(conn.ConnectionString) && conn.ConnectionString.Length > 50)
+                            {
+                                <span title="@conn.ConnectionString">@($"{conn.ConnectionString.Substring(0, 50)}...")</span>
+                            }
+                            else
+                            {
+                                @conn.ConnectionString
+                            }
+                        </td>
+                        <td>@conn.DatabaseType</td>
+                        <td>@conn.UpdatedAt.ToLocalTime().ToString("g")</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditConnectionModal(conn.Id)" title="Edit Connection">
+                                <i class="bi bi-pencil-square"></i> Edit
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ShowDeleteConfirmModal(conn.Id)" title="Delete Connection">
+                                <i class="bi bi-trash3-fill"></i> Delete
+                            </button>
+                            @* Optional: Test Connection Button
+                            <button class="btn btn-sm btn-outline-info" @onclick="() => TestConnection(conn.Id)" title="Test Connection">
+                                <i class="bi bi-activity"></i>
+                            </button>
+                            *@
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<!-- Connection Modal (Add/Edit) -->
+@if (showConnectionModal)
+{
+    <div class="modal fade show" tabindex="-1" style="display:block;" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <EditForm Model="currentConnection" OnValidSubmit="HandleSaveConnection">
+                    <DataAnnotationsValidator />
+                    <div class="modal-header">
+                        <h5 class="modal-title">@(currentConnection.Id == Guid.Empty ? "Add New Connection" : "Edit Connection")</h5>
+                        <button type="button" class="btn-close" @onclick="CloseConnectionModal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="connName" class="form-label">Connection Name <span class="text-danger">*</span></label>
+                            <InputText id="connName" class="form-control" @bind-Value="currentConnection.Name" />
+                            <ValidationMessage For="@(() => currentConnection.Name)" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="connString" class="form-label">Connection String <span class="text-danger">*</span></label>
+                            <InputTextArea id="connString" class="form-control" @bind-Value="currentConnection.ConnectionString" rows="3" />
+                            <ValidationMessage For="@(() => currentConnection.ConnectionString)" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="connDbType" class="form-label">Database Type <span class="text-danger">*</span></label>
+                            <InputSelect id="connDbType" class="form-select" @bind-Value="currentConnection.DatabaseType">
+                                @foreach (var type in Enum.GetValues(typeof(DatabaseType)))
+                                {
+                                    <option value="@type">@type</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => currentConnection.DatabaseType)" />
+                        </div>
+                         @if (!string.IsNullOrWhiteSpace(errorMessage))
+                        {
+                            <div class="alert alert-danger mt-3" role="alert">
+                                @errorMessage
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(testMessage))
+                        {
+                            <div class="alert @(testSuccess ? "alert-success" : "alert-warning") mt-3" role="alert">
+                                @testMessage
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseConnectionModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                             <i class="bi bi-check-circle-fill me-1"></i> Save Connection
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteConfirmModal)
+{
+    <div class="modal fade show" tabindex="-1" style="display:block" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDeleteConfirmModal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the connection "<strong>@connectionToDelete?.Name</strong>"?</p>
+                    <p>This action cannot be undone.</p>
+                     @if (!string.IsNullOrWhiteSpace(errorMessage))
+                    {
+                        <div class="alert alert-danger mt-3" role="alert">
+                            @errorMessage
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteConfirmModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteConnection">
+                        <i class="bi bi-trash3-fill me-1"></i> Delete Connection
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}

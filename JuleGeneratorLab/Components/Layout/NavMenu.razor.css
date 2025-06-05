@@ -69,6 +69,9 @@
         align-items: center;
         line-height: 3rem;
         width: 100%;
+        white-space: nowrap;     /* Prevent text from wrapping */
+        overflow: hidden;        /* Hide overflowing text */
+        text-overflow: ellipsis; /* Show ... for overflowing text */
     }
 
 .nav-item ::deep a.active {
