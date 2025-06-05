@@ -121,11 +121,72 @@ else
     @if(showEditOrCreateForm) { <div class="modal-backdrop fade show"></div> }
 }
 
-<!-- Placeholder for Help/Documentation -->
-<div class="mt-5 p-3 border rounded">
-    <h4>Template Authoring Help</h4>
-    <p><em>[Guidance on Scriban syntax and available objects (TableName, ClassName, SelectedColumns etc.) will go here]</em></p>
-    <p>Example column access: <code>{{ for col in SelectedColumns }} {{ col.ColumnName }} ({{ col.DataType }}) {{ end }}</code></p>
+        <div class="mt-5 p-3 border rounded bg-light">
+            <h4>Template Authoring Help (Scriban Syntax)</h4>
+            <p>This generator uses the <a href="https://github.com/scriban/scriban/blob/master/doc/language.md" target="_blank">Scriban templating language</a>. Here are the basics to get you started:</p>
+
+            <h5>1. Accessing Data</h5>
+            <p>You have access to the following global objects and variables in your templates:</p>
+            <ul>
+                <li><code><strong>{{ TableName }}</strong></code>: (String) The raw name of the selected database table (e.g., "SalesOrderHeader").</li>
+                <li><code><strong>{{ ClassName }}</strong></code>: (String) A normalized version of the table name, suitable for use as a C# class name (e.g., "SalesOrderHeader").</li>
+                <li><code><strong>{{ SelectedColumns }}</strong></code>: (List) A list of the columns you selected from the table. Each item in this list is a 'column' object.</li>
+            </ul>
+            <p>Each <code>column</code> object in <code>SelectedColumns</code> has the following properties (accessible like <code>{{ col.PropertyName }}</code> inside a loop):</p>
+            <ul>
+                <li><code><strong>ColumnName</strong></code>: (String) The original name of the column (e.g., "order_date").</li>
+                <li><code><strong>DataType</strong></code>: (String) The database data type of the column (e.g., "datetime", "nvarchar").</li>
+                <li><code><strong>IsPrimaryKey</strong></code>: (Boolean) True if the column is part of the primary key, false otherwise.</li>
+                <li><code><strong>IsNullable</strong></code>: (Boolean) True if the column allows NULL values, false otherwise.</li>
+            </ul>
+
+            <h5>2. Basic Syntax</h5>
+            <ul>
+                <li><strong>Outputting values:</strong> Use double curly braces: <code>{{ ClassName }}</code> or <code>{{ col.ColumnName }}</code>.</li>
+                <li><strong>Comments:</strong> <code>{{# This is a comment #}}</code> or <code>{{## ... multi-line ... ##}}</code> (Note: Scriban's default might be just <code>##</code> for single line, check docs if specific comment syntax is needed beyond HTML comments in template text). Scriban typically treats text outside <code>{{ ... }}` as literal text.</li>
+            </ul>
+
+            <h5>3. Loops</h5>
+            <p>To iterate over the selected columns:</p>
+            <pre><code>{{ for col in SelectedColumns }}
+    // Access column properties here:
+    Column: {{ col.ColumnName }}, Type: {{ col.DataType }}
+    {{ if col.IsPrimaryKey }} (Primary Key){{ end }}
+{{ end }}</code></pre>
+
+            <h5>4. Conditionals</h5>
+            <p>To include content based on a condition:</p>
+            <pre><code>{{ if col.IsNullable }}
+    This column ({{ col.ColumnName }}) can be null.
+{{ else }}
+    This column ({{ col.ColumnName }}) is NOT NULL.
+{{ end }}</code></pre>
+            <p>You can also use <code>else if</code>.</p>
+
+            <h5>5. Custom Functions</h5>
+            <p>The following C# helper functions are available for use in your templates:</p>
+            <ul>
+                <li><code><strong>normalize_property_name(string)</strong></code>: Converts a database column name (e.g., "user_id") to a C# style property name (e.g., "UserId").
+                    <br/>Usage: <code>{{ normalize_property_name col.ColumnName }}</code></li>
+                <li><code><strong>map_db_type_to_csharp(string)</strong></code>: Maps a database data type string (e.g., "nvarchar", "int") to its corresponding C# type string (e.g., "string", "int").
+                    <br/>Usage: <code>{{ map_db_type_to_csharp col.DataType }}</code></li>
+            </ul>
+            <p>You can use these with the pipe character <code>|</code> for chaining, though direct function call syntax is often clearer for these specific custom functions: <code>{{ map_db_type_to_csharp col.DataType }}</code> is generally preferred over <code>{{ col.DataType | map_db_type_to_csharp }}</code> for clarity, but both might work depending on exact registration in Scriban.</p>
+
+            <h5>6. Scriban Built-in Functions</h5>
+            <p>Scriban provides many <a href="https://github.com/scriban/scriban/blob/master/doc/builtins.md" target="_blank">built-in functions</a>, especially for string manipulation, math, dates, etc. For example:</p>
+            <ul>
+                <li><code>string.capitalize</code>, <code>string.downcase</code>, <code>string.upcase</code></li>
+                <li><code>string.replace input_string pattern replacement_string</code></li>
+                <li><code>string.contains input_string substring_to_find</code></li>
+            </ul>
+            <p>Example: <code>{{ col.ColumnName | string.downcase }}</code> or <code>{{ string.replace col.ColumnName "_" "" }}</code></p>
+
+            <h5>Example: Generating a C# Property</h5>
+            <pre><code>{{ for col in SelectedColumns }}
+    public {{ map_db_type_to_csharp col.DataType }} {{ normalize_property_name col.ColumnName }} { get; set; }{{ if col.IsNullable && !(map_db_type_to_csharp col.DataType == "string" || map_db_type_to_csharp col.DataType == "byte[]" || map_db_type_to_csharp col.DataType == "object") }}?{{ end }}
+{{ end }}</code></pre>
+            <p class="small text-muted">This example also shows a conditional for adding a '?' for nullable reference types in C#.</p>
 </div>
 
 @code {
