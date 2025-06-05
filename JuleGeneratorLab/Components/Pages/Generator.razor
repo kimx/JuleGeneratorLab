@@ -5,14 +5,60 @@
 @inject CodeSnippetService SnippetService
 @inject CodeGenerationService CodeGenService
 @inject IJSRuntime JSRuntime
+@inject ProjectService ProjectSvc
+@inject DatabaseConnectionService DbConnectionSvc
 
 <h3>Code Generator</h3>
 
 <div class="container-fluid">
+    <!-- Row 0: Project Selection -->
+    <div class="row p-2 my-2 border rounded">
+        <div class="col-12">
+            <h4>Project Selection</h4>
+            @if (availableProjects == null)
+            {
+                <p><em>Loading projects...</em></p>
+            }
+            else if (!availableProjects.Any())
+            {
+                <p>No projects available. Please create a project in the Project Manager.</p>
+            }
+            else
+            {
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="projectSelector" class="form-label">Select Project:</label>
+                        <InputSelect id="projectSelector" class="form-select" @bind-Value="selectedProjectId">
+                            <option value="">-- Select a Project --</option>
+                            @foreach (var proj in availableProjects)
+                            {
+                                <option value="@proj.Id">@proj.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-6 align-self-end">
+                        <button class="btn btn-info" @onclick="LoadSelectedProject" disabled="@(selectedProjectId == null || selectedProjectId == Guid.Empty)">
+                            <i class="bi bi-folder-symlink me-1"></i> Load Project Details
+                        </button>
+                    </div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(projectLoadStatus))
+            {
+                <div class="mt-2 alert @(currentLoadedProject != null && isProjectLoaded ? "alert-success" : "alert-warning")">
+                    @projectLoadStatus
+                </div>
+            }
+        </div>
+    </div>
+
     <!-- Row 1: Database Connection -->
     <div class="row p-2 my-2 border rounded">
         <div class="col-12">
-            <h4>Database Connection</h4>
+            <h4>@(isProjectLoaded && currentLoadedProject != null ? $"Database Connection (from Project: {currentLoadedProject.Name})" : "Database Connection (Manual)")</h4>
+
+            @if (!isProjectLoaded)
+            {
                     <div class="mb-3">
                         <label for="serverName" class="form-label">Server Name</label>
                         <input type="text" class="form-control" id="serverName" @bind="connectionDetails.ServerName" />
@@ -39,10 +85,11 @@
                             <input type="password" class="form-control" id="password" @bind="connectionDetails.Password" />
                         </div>
                     }
-                    <button class="btn btn-success" @onclick="ConnectToDatabase">Connect</button>
-                    @if (!string.IsNullOrEmpty(connectionStatus))
-                    {
-                        <div class="mt-2 alert @(isConnectionSuccess ? "alert-success" : "alert-danger")">
+                    <button class="btn btn-success" @onclick="() => ConnectToDatabase(null)">Connect (Manual)</button>
+            }
+            @if (!string.IsNullOrEmpty(connectionStatus))
+            {
+                <div class="mt-2 alert @(isConnectionSuccess ? "alert-success" : "alert-danger")">
                             @connectionStatus
                         </div>
                     }
@@ -158,6 +205,13 @@
     private bool isConnectionSuccess = false;
     private List<string> tables = new List<string>();
 
+    // Project related properties
+    private List<Project>? availableProjects;
+    private Guid? selectedProjectId;
+    private Project? currentLoadedProject;
+    private string? projectLoadStatus;
+    private bool isProjectLoaded = false;
+
     private string? currentSelectedTable;
     private List<ColumnDetail> columnsForSelectedTable = new List<ColumnDetail>();
     private Dictionary<string, bool> selectedColumns = new Dictionary<string, bool>(); // ColumnName -> IsSelected
@@ -174,8 +228,78 @@
         {
             selectedSnippetName = availableSnippets.First().Name; // Default to first snippet
         }
+
+        try
+        {
+            availableProjects = await ProjectSvc.GetProjectsAsync();
+        }
+        catch (Exception ex)
+        {
+            projectLoadStatus = $"Error loading projects: {ex.Message}";
+            availableProjects = new List<Project>();
+        }
+
         // Any other async initialization logic can go here
         await base.OnInitializedAsync(); // Call base method
+    }
+
+    private async Task LoadSelectedProject()
+    {
+        projectLoadStatus = null;
+        currentLoadedProject = null;
+        isProjectLoaded = false;
+        connectionStatus = null; // Clear previous manual connection status
+        tables.Clear(); // Clear tables from previous connection
+        currentSelectedTable = null;
+        columnsForSelectedTable.Clear();
+        selectedColumns.Clear();
+
+
+        if (selectedProjectId == null || selectedProjectId == Guid.Empty)
+        {
+            projectLoadStatus = "Please select a project to load.";
+            return;
+        }
+
+        try
+        {
+            currentLoadedProject = await ProjectSvc.GetProjectByIdAsync(selectedProjectId.Value);
+            if (currentLoadedProject == null)
+            {
+                projectLoadStatus = "Failed to load selected project details.";
+                return;
+            }
+
+            if (currentLoadedProject.DatabaseConnectionId.HasValue && currentLoadedProject.DatabaseConnectionId.Value != Guid.Empty)
+            {
+                var dbConn = await DbConnectionSvc.GetConnectionByIdAsync(currentLoadedProject.DatabaseConnectionId.Value);
+                if (dbConn != null)
+                {
+                    projectLoadStatus = $"Project '{currentLoadedProject.Name}' loaded. Database connection '{dbConn.Name}' will be used.";
+                    isProjectLoaded = true;
+
+                    // Automatically connect using the project's connection string
+                    await ConnectToDatabase(dbConn.ConnectionString);
+                }
+                else
+                {
+                    projectLoadStatus = $"Project '{currentLoadedProject.Name}' loaded, but its associated database connection (ID: {currentLoadedProject.DatabaseConnectionId.Value}) could not be found. Please check DB Connections.";
+                    isProjectLoaded = true; // Project is loaded, but DB connection is missing
+                }
+            }
+            else
+            {
+                projectLoadStatus = $"Project '{currentLoadedProject.Name}' loaded, but it does not have a database connection configured.";
+                isProjectLoaded = true; // Project is loaded, but no DB connection to use
+            }
+
+            // Future: Load/filter snippets based on currentLoadedProject.SelectedSnippetSetId
+        }
+        catch (Exception ex)
+        {
+            projectLoadStatus = $"Error loading project: {ex.Message}";
+        }
+        StateHasChanged();
     }
 
     private class ConnectionDetails
@@ -199,7 +323,7 @@
         }
     }
 
-    private async Task ConnectToDatabase()
+    private async Task ConnectToDatabase(string? connectionStringFromProject = null)
     {
         connectionStatus = "Connecting...";
         isConnectionSuccess = false;
@@ -208,27 +332,49 @@
         columnsForSelectedTable.Clear();
         selectedColumns.Clear();
         columnSelectionError = null;
+        string connectionString;
+
+        if (isProjectLoaded && !string.IsNullOrEmpty(connectionStringFromProject))
+        {
+            connectionString = connectionStringFromProject;
+            // Update display fields for connectionDetails to reflect project's settings (optional, if shown)
+            // This might be complex if parsing is needed. For now, status messages will indicate project use.
+            // connectionDetails.ServerName = "Using Project Connection";
+            // connectionDetails.DatabaseName = ""; // Clear manual fields or mark as from project
+        }
+        else if (!isProjectLoaded) // Only build from manual details if not in project mode or project connection string is missing
+        {
+            connectionString = connectionDetails.BuildConnectionString();
+        }
+        else // isProjectLoaded but connectionStringFromProject is null/empty (e.g. project has no DB configured)
+        {
+            connectionStatus = "Project is loaded, but no database connection string was provided by the project. Cannot connect.";
+            isConnectionSuccess = false;
+            StateHasChanged();
+            return;
+        }
+
 
         try
         {
-            string connectionString = connectionDetails.BuildConnectionString();
-            var fetchedTables = DbSchemaReader.GetTables(connectionString); // This will now make a real call
+            var fetchedTables = DbSchemaReader.GetTables(connectionString);
 
             if (fetchedTables != null && fetchedTables.Any())
             {
                 tables = fetchedTables;
-                connectionStatus = $"Successfully connected to '{connectionDetails.DatabaseName}' and retrieved {tables.Count} table(s).";
+                string dbName = isProjectLoaded ? (currentLoadedProject?.Name ?? "project") : connectionDetails.DatabaseName;
+                connectionStatus = $"Successfully connected (using {(isProjectLoaded ? $"project '{currentLoadedProject?.Name}'" : "manual settings")}) and retrieved {tables.Count} table(s).";
                 isConnectionSuccess = true;
             }
             else
             {
-                connectionStatus = $"Connected to '{connectionDetails.DatabaseName}', but no user tables were found.";
+                connectionStatus = $"Connected (using {(isProjectLoaded ? $"project '{currentLoadedProject?.Name}'" : "manual settings")}), but no user tables were found.";
                 isConnectionSuccess = true; // Connection itself was successful
             }
         }
         catch (Exception ex) // Catch exceptions thrown by GetTables
         {
-            connectionStatus = $"Error: {ex.Message}";
+            connectionStatus = $"Error connecting: {ex.Message}";
             if (ex.InnerException != null)
             {
                 connectionStatus += $" Inner Exception: {ex.InnerException.Message}";
@@ -240,21 +386,44 @@
 
     private async Task SelectTableAndLoadColumns(string tableName)
     {
-        currentSelectedTable = tableName;
+        currentSelectedTable = tableName; // Assign first
         columnsForSelectedTable.Clear();
         selectedColumns.Clear();
         columnSelectionError = null;
 
-        if (string.IsNullOrEmpty(currentSelectedTable))
+        if (string.IsNullOrEmpty(currentSelectedTable)) // Now this check is meaningful
         {
+            // This condition might not even be strictly necessary if tableName is always valid
+            // but as a guard or if tableName could be empty from UI, it's okay.
+            StateHasChanged();
+            return;
+        }
+
+        string connectionStringForColumns;
+        if (isProjectLoaded && currentLoadedProject?.DatabaseConnectionId != null)
+        {
+            var dbConn = await DbConnectionSvc.GetConnectionByIdAsync(currentLoadedProject.DatabaseConnectionId.Value);
+            if (dbConn == null) {
+                columnSelectionError = "Project's database connection not found for loading columns.";
+                StateHasChanged();
+                return;
+            }
+            connectionStringForColumns = dbConn.ConnectionString;
+        }
+        else if (!isProjectLoaded)
+        {
+            connectionStringForColumns = connectionDetails.BuildConnectionString();
+        }
+        else // Project loaded but no specific connection string (e.g. project has no DB)
+        {
+            columnSelectionError = "Cannot load columns: Project is loaded but has no configured database connection.";
             StateHasChanged();
             return;
         }
 
         try
         {
-            string connectionString = connectionDetails.BuildConnectionString();
-            columnsForSelectedTable = DbSchemaReader.GetColumns(connectionString, currentSelectedTable);
+            columnsForSelectedTable = DbSchemaReader.GetColumns(connectionStringForColumns, currentSelectedTable);
             foreach (var column in columnsForSelectedTable)
             {
                 selectedColumns.Add(column.ColumnName, true); // Default to select all columns initially
