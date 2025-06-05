@@ -11,6 +11,7 @@ namespace JuleGeneratorLab.Services
     {
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly IJSRuntime _jsRuntime;
+        private readonly string _userSnippetsFilePath;
 
         public List<CodeSnippet> Snippets { get; private set; } = new List<CodeSnippet>();
         private List<CodeSnippet> _defaultSnippets = new List<CodeSnippet>();
@@ -23,6 +24,11 @@ namespace JuleGeneratorLab.Services
         {
             _hostingEnvironment = hostingEnvironment;
             _jsRuntime = jsRuntime;
+
+            // Define the path for user_snippets.json
+            // Directory creation will be handled in the SaveUserSnippetsAsync method if/when it writes to this path.
+            string dataDirectory = Path.Combine(_hostingEnvironment.ContentRootPath, "Data");
+            _userSnippetsFilePath = Path.Combine(dataDirectory, "user_snippets.json");
         }
 
         public async Task EnsureInitializedAsync()
@@ -86,11 +92,57 @@ namespace JuleGeneratorLab.Services
 
         private async Task LoadUserSnippetsAsync()
         {
-            // User snippets will be loaded via upload or other file-based mechanisms.
-            // For now, initialize as an empty list.
-            _userSnippets = new List<CodeSnippet>();
-            // Ensure await is used if any async operations were to be added here in the future.
-            await Task.CompletedTask;
+            if (File.Exists(_userSnippetsFilePath))
+            {
+                try
+                {
+                    string jsonContent = await File.ReadAllTextAsync(_userSnippetsFilePath);
+                    if (!string.IsNullOrWhiteSpace(jsonContent))
+                    {
+                        var snippets = JsonSerializer.Deserialize<List<CodeSnippet>>(jsonContent, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                        if (snippets != null)
+                        {
+                            _userSnippets = snippets.Select(s => { s.IsUserDefined = true; return s; }).ToList();
+                        }
+                        else
+                        {
+                            _userSnippets = new List<CodeSnippet>();
+                            // Log warning: Deserializing user snippets resulted in null.
+                            Console.WriteLine($"Warning: Deserializing user snippets from file '{_userSnippetsFilePath}' resulted in null. Initializing with an empty list.");
+                        }
+                    }
+                    else
+                    {
+                        _userSnippets = new List<CodeSnippet>(); // File exists but is empty or whitespace.
+                         Console.WriteLine($"Info: User snippets file '{_userSnippetsFilePath}' exists but is empty or whitespace. Initializing with an empty list.");
+                    }
+                }
+                catch (JsonException jsonEx)
+                {
+                    Console.WriteLine($"Error deserializing user snippets from file '{_userSnippetsFilePath}': {jsonEx.Message}. Initializing with an empty list.");
+                    _userSnippets = new List<CodeSnippet>();
+                }
+                catch (IOException ioEx)
+                {
+                    Console.WriteLine($"Error reading user snippets file '{_userSnippetsFilePath}': {ioEx.Message}. Initializing with an empty list.");
+                    _userSnippets = new List<CodeSnippet>();
+                }
+                catch (Exception ex) // Catch any other unexpected errors
+                {
+                    Console.WriteLine($"Unexpected error loading user snippets from file '{_userSnippetsFilePath}': {ex.Message}. Initializing with an empty list.");
+                    _userSnippets = new List<CodeSnippet>();
+                }
+            }
+            else
+            {
+                _userSnippets = new List<CodeSnippet>(); // File doesn't exist, initialize to empty.
+                // Log info: User snippets file not found, initializing with an empty list. This is normal on first run.
+                Console.WriteLine($"Info: User snippets file '{_userSnippetsFilePath}' not found. Initializing with an empty list. This is normal on first run or if no user snippets have been saved yet.");
+            }
         }
 
         private void MergeSnippets()
@@ -109,11 +161,39 @@ namespace JuleGeneratorLab.Services
 
         public async Task SaveUserSnippetsAsync()
         {
-            // This method will be repurposed or used for download functionality.
-            // For now, it does nothing or could trigger a download if implemented here.
-            MergeSnippets(); // Refresh the public Snippets list after any in-memory changes.
-            // Ensure await is used if any async operations were to be added here in the future.
-            await Task.CompletedTask;
+            try
+            {
+                // Ensure the directory exists
+                string? directoryPath = Path.GetDirectoryName(_userSnippetsFilePath);
+                if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
+                {
+                    Directory.CreateDirectory(directoryPath);
+                    Console.WriteLine($"Info: Created directory '{directoryPath}' for user snippets.");
+                }
+
+                // Serialize the current _userSnippets list
+                string jsonContent = JsonSerializer.Serialize(_userSnippets, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                    // DefaultJsonIgnoreCondition = JsonIgnoreCondition.Never (default) is appropriate
+                });
+
+                // Write the JSON to the file
+                await File.WriteAllTextAsync(_userSnippetsFilePath, jsonContent);
+                Console.WriteLine($"Info: User snippets successfully saved to '{_userSnippetsFilePath}'.");
+            }
+            catch (Exception ex) // Catch a general exception for file I/O, serialization, or directory creation
+            {
+                Console.WriteLine($"Error saving user snippets to file '{_userSnippetsFilePath}': {ex.Message}");
+                // Depending on requirements, you might want to re-throw or handle more specifically
+                // For example, if unauthorized, it might indicate a deployment/permissions issue.
+            }
+            finally
+            {
+                // Ensure MergeSnippets is called to keep the public Snippets list consistent
+                // with the in-memory _userSnippets, regardless of save success/failure.
+                MergeSnippets();
+            }
         }
 
         public async Task AddUserSnippetAsync(CodeSnippet snippet)
@@ -155,15 +235,15 @@ namespace JuleGeneratorLab.Services
             }
         }
 
-        public Task<bool> LoadUserSnippetsFromJsonAsync(string jsonContent)
+        public async Task<bool> LoadUserSnippetsFromJsonAsync(string jsonContent)
         {
             if (string.IsNullOrWhiteSpace(jsonContent))
             {
-                // Consider if this should clear existing user snippets or be a silent no-op
-                // For now, let's assume an empty/whitespace string means "clear user snippets"
+                // Treat empty or whitespace JSON as a request to clear user snippets.
                 _userSnippets = new List<CodeSnippet>();
-                MergeSnippets();
-                return Task.FromResult(true); // Successfully "loaded" empty set
+                await SaveUserSnippetsAsync(); // Persist the cleared list and merge.
+                Console.WriteLine($"Info: Loaded empty/whitespace JSON. User snippets cleared and saved.");
+                return true;
             }
 
             try
@@ -179,11 +259,14 @@ namespace JuleGeneratorLab.Services
                 }
                 else
                 {
-                    // If deserialization results in null (e.g. JSON was "null")
+                    // If deserialization results in null (e.g., JSON was "null"), treat as empty.
                     _userSnippets = new List<CodeSnippet>();
+                    Console.WriteLine($"Info: Deserialized JSON content resulted in null. User snippets initialized as empty.");
                 }
-                MergeSnippets();
-                return Task.FromResult(true);
+
+                await SaveUserSnippetsAsync(); // Persist the loaded/updated snippets and merge.
+                Console.WriteLine($"Info: User snippets successfully loaded from JSON and saved.");
+                return true;
             }
             catch (JsonException ex)
             {
