@@ -14,6 +14,7 @@ namespace JuleGeneratorLab.Components.Pages
         private List<DatabaseConnection>? availableConnections;
         private Project currentProject = new(); // For Add/Edit form
         private Project? projectToDelete; // For delete confirmation
+        private string currentProjectSnippetSetIdString = string.Empty;
 
         private bool showProjectModal = false;
         private bool showDeleteConfirmModal = false;
@@ -64,6 +65,7 @@ namespace JuleGeneratorLab.Components.Pages
         private void ShowAddProjectModal()
         {
             currentProject = new Project { Id = Guid.Empty }; // Ensure a new project object for add
+            currentProjectSnippetSetIdString = string.Empty; // Add this line
             errorMessage = null;
             showProjectModal = true;
         }
@@ -81,10 +83,11 @@ namespace JuleGeneratorLab.Components.Pages
                     Namespace = project.Namespace,
                     Description = project.Description,
                     DatabaseConnectionId = project.DatabaseConnectionId,
-                    SelectedSnippetSetId = project.SelectedSnippetSetId,
+                    SelectedSnippetSetId = project.SelectedSnippetSetId, // Keep this
                     CreatedAt = project.CreatedAt,
                     UpdatedAt = project.UpdatedAt
                 };
+                currentProjectSnippetSetIdString = project.SelectedSnippetSetId?.ToString() ?? string.Empty; // Add this line
                 errorMessage = null;
                 showProjectModal = true;
             }
@@ -104,6 +107,24 @@ namespace JuleGeneratorLab.Components.Pages
         private async Task HandleSaveProject()
         {
             errorMessage = null;
+
+            // Add these lines for parsing Guid
+            if (string.IsNullOrWhiteSpace(currentProjectSnippetSetIdString))
+            {
+                currentProject.SelectedSnippetSetId = null;
+            }
+            else if (Guid.TryParse(currentProjectSnippetSetIdString, out Guid parsedGuid))
+            {
+                currentProject.SelectedSnippetSetId = parsedGuid;
+            }
+            else
+            {
+                errorMessage = "Invalid Snippet Set ID format. It should be a valid GUID or empty.";
+                // Ensure StateHasChanged is called if you want the modal to update with this error message
+                // without closing, or if the form submission automatically updates.
+                // For now, just setting the message and letting the existing flow handle it.
+                return; // Stop the save if parsing fails
+            }
             try
             {
                 if (currentProject.Id == Guid.Empty) // New project
