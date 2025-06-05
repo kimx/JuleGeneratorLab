@@ -1,0 +1,294 @@
+@page "/snippetmanager"
+@using JuleGeneratorLab.Models
+@using JuleGeneratorLab.Services
+@inject CodeSnippetService SnippetService
+@inject IJSRuntime JSRuntime // Will be needed for LocalStorage interaction via service
+
+<h3>Code Snippet Manager</h3>
+
+<div class="my-3">
+    <button class="btn btn-primary" @onclick="ShowCreateForm">Create New Snippet</button>
+</div>
+
+@if (snippets == null)
+{
+    <p><em>Loading snippets...</em></p>
+}
+else if (!snippets.Any())
+{
+    <p>No snippets found. Create your first one!</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Type</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var snippet in snippets)
+            {
+                <tr>
+                    <td>@snippet.Name</td>
+                    <td>@snippet.Description</td>
+                    <td>
+                        @if (snippet.IsUserDefined)
+                        {
+                            <span class="badge bg-success">User</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-info">Default</span>
+                        }
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ViewSnippet(snippet)">View</button>
+                        @if (snippet.IsUserDefined)
+                        {
+                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditForm(snippet)">Edit</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDeleteSnippet(snippet)">Delete</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<!-- Modal for Viewing Snippet Template -->
+@if (viewingSnippet != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">View Snippet: @viewingSnippet.Name</h5>
+                    <button type="button" class="btn-close" @onclick="CloseViewModal"></button>
+                </div>
+                <div class="modal-body">
+                    <pre style="max-height: 400px; overflow-y: auto; background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; border-radius: 4px;"><code>@viewingSnippet.Template</code></pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseViewModal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+<!-- Create/Edit Form Modal -->
+@if (showEditOrCreateForm && currentEditSnippet != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.4);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <EditForm Model="currentEditSnippet" OnValidSubmit="HandleSaveSnippet">
+                    <DataAnnotationsValidator />
+                    <div class="modal-header">
+                        <h5 class="modal-title">@(currentEditSnippet.IsUserDefined && !string.IsNullOrEmpty(originalSnippetNameForEdit) ? "Edit" : "Create") Snippet</h5>
+                        <button type="button" class="btn-close" @onclick="CloseEditOrCreateForm"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="snippetName" class="form-label">Name:</label>
+                            <InputText id="snippetName" class="form-control" @bind-Value="currentEditSnippet.Name" />
+                            <ValidationMessage For="@(() => currentEditSnippet.Name)" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="snippetDescription" class="form-label">Description:</label>
+                            <InputTextArea id="snippetDescription" class="form-control" @bind-Value="currentEditSnippet.Description" rows="2" />
+                            <ValidationMessage For="@(() => currentEditSnippet.Description)" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="snippetTemplate" class="form-label">Template:</label>
+                            <InputTextArea id="snippetTemplate" class="form-control" @bind-Value="currentEditSnippet.Template" rows="15" style="font-family: monospace; white-space: pre;" />
+                            <ValidationMessage For="@(() => currentEditSnippet.Template)" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <button type="button" class="btn btn-secondary" @onclick="CloseEditOrCreateForm">Cancel</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+    @if(showEditOrCreateForm) { <div class="modal-backdrop fade show"></div> }
+}
+
+        <div class="mt-5 p-3 border rounded bg-light">
+            <h4>Template Authoring Help (Scriban Syntax)</h4>
+            <p>This generator uses the <a href="https://github.com/scriban/scriban/blob/master/doc/language.md" target="_blank">Scriban templating language</a>. Here are the basics to get you started:</p>
+
+            <h5>1. Accessing Data</h5>
+            <p>You have access to the following global objects and variables in your templates:</p>
+            <ul>
+                <li><code><strong>{{ TableName }}</strong></code>: (String) The raw name of the selected database table (e.g., "SalesOrderHeader").</li>
+                <li><code><strong>{{ ClassName }}</strong></code>: (String) A normalized version of the table name, suitable for use as a C# class name (e.g., "SalesOrderHeader").</li>
+                <li><code><strong>{{ SelectedColumns }}</strong></code>: (List) A list of the columns you selected from the table. Each item in this list is a 'column' object.</li>
+            </ul>
+            <p>Each <code>column</code> object in <code>SelectedColumns</code> has the following properties (accessible like <code>{{ col.PropertyName }}</code> inside a loop):</p>
+            <ul>
+                <li><code><strong>ColumnName</strong></code>: (String) The original name of the column (e.g., "order_date").</li>
+                <li><code><strong>DataType</strong></code>: (String) The database data type of the column (e.g., "datetime", "nvarchar").</li>
+                <li><code><strong>IsPrimaryKey</strong></code>: (Boolean) True if the column is part of the primary key, false otherwise.</li>
+                <li><code><strong>IsNullable</strong></code>: (Boolean) True if the column allows NULL values, false otherwise.</li>
+            </ul>
+
+            <h5>2. Basic Syntax</h5>
+            <ul>
+                <li><strong>Outputting values:</strong> Use double curly braces: <code>{{ ClassName }}</code> or <code>{{ col.ColumnName }}</code>.</li>
+                <li><strong>Comments:</strong> <code>{{# This is a comment #}}</code> or <code>{{## ... multi-line ... ##}}</code> (Note: Scriban's default might be just <code>##</code> for single line, check docs if specific comment syntax is needed beyond HTML comments in template text). Scriban typically treats text outside <code>{{ ... }}` as literal text.</li>
+            </ul>
+
+            <h5>3. Loops</h5>
+            <p>To iterate over the selected columns:</p>
+            <pre><code>{{ for col in SelectedColumns }}
+    // Access column properties here:
+    Column: {{ col.ColumnName }}, Type: {{ col.DataType }}
+    {{ if col.IsPrimaryKey }} (Primary Key){{ end }}
+{{ end }}</code></pre>
+
+            <h5>4. Conditionals</h5>
+            <p>To include content based on a condition:</p>
+            <pre><code>{{ if col.IsNullable }}
+    This column ({{ col.ColumnName }}) can be null.
+{{ else }}
+    This column ({{ col.ColumnName }}) is NOT NULL.
+{{ end }}</code></pre>
+            <p>You can also use <code>else if</code>.</p>
+
+            <h5>5. Custom Functions</h5>
+            <p>The following C# helper functions are available for use in your templates:</p>
+            <ul>
+                <li><code><strong>normalize_property_name(string)</strong></code>: Converts a database column name (e.g., "user_id") to a C# style property name (e.g., "UserId").
+                    <br/>Usage: <code>{{ normalize_property_name col.ColumnName }}</code></li>
+                <li><code><strong>map_db_type_to_csharp(string)</strong></code>: Maps a database data type string (e.g., "nvarchar", "int") to its corresponding C# type string (e.g., "string", "int").
+                    <br/>Usage: <code>{{ map_db_type_to_csharp col.DataType }}</code></li>
+            </ul>
+            <p>You can use these with the pipe character <code>|</code> for chaining, though direct function call syntax is often clearer for these specific custom functions: <code>{{ map_db_type_to_csharp col.DataType }}</code> is generally preferred over <code>{{ col.DataType | map_db_type_to_csharp }}</code> for clarity, but both might work depending on exact registration in Scriban.</p>
+
+            <h5>6. Scriban Built-in Functions</h5>
+            <p>Scriban provides many <a href="https://github.com/scriban/scriban/blob/master/doc/builtins.md" target="_blank">built-in functions</a>, especially for string manipulation, math, dates, etc. For example:</p>
+            <ul>
+                <li><code>string.capitalize</code>, <code>string.downcase</code>, <code>string.upcase</code></li>
+                <li><code>string.replace input_string pattern replacement_string</code></li>
+                <li><code>string.contains input_string substring_to_find</code></li>
+            </ul>
+            <p>Example: <code>{{ col.ColumnName | string.downcase }}</code> or <code>{{ string.replace col.ColumnName "_" "" }}</code></p>
+
+            <h5>Example: Generating a C# Property</h5>
+            <pre><code>{{ for col in SelectedColumns }}
+    public {{ map_db_type_to_csharp col.DataType }} {{ normalize_property_name col.ColumnName }} { get; set; }{{ if col.IsNullable && !(map_db_type_to_csharp col.DataType == "string" || map_db_type_to_csharp col.DataType == "byte[]" || map_db_type_to_csharp col.DataType == "object") }}?{{ end }}
+{{ end }}</code></pre>
+            <p class="small text-muted">This example also shows a conditional for adding a '?' for nullable reference types in C#.</p>
+</div>
+
+@code {
+    private List<CodeSnippet>? snippets;
+    private CodeSnippet? viewingSnippet; // For view modal
+    private CodeSnippet? currentEditSnippet; // For edit form
+    private bool showEditOrCreateForm = false;
+    private string? originalSnippetNameForEdit; // To keep track of the name before editing
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSnippetsAsync();
+    }
+
+    private async Task LoadSnippetsAsync()
+    {
+        await SnippetService.EnsureInitializedAsync(); // Ensure service is ready
+        snippets = SnippetService.Snippets.OrderBy(s => s.Name).ToList();
+        StateHasChanged(); // Notify Blazor to re-render
+    }
+
+    private void ShowCreateForm()
+    {
+        originalSnippetNameForEdit = null; // Clear it for new snippet
+        currentEditSnippet = new CodeSnippet { IsUserDefined = true, Name = "New Snippet", Description = "A new user-defined snippet.", Template = "// Start your template here" };
+        showEditOrCreateForm = true;
+    }
+
+    private void ShowEditForm(CodeSnippet snippetToEdit)
+    {
+        originalSnippetNameForEdit = snippetToEdit.Name; // Store original name
+        currentEditSnippet = new CodeSnippet // Create a copy for editing
+        {
+            Name = snippetToEdit.Name,
+            Description = snippetToEdit.Description,
+            Template = snippetToEdit.Template,
+            IsUserDefined = snippetToEdit.IsUserDefined // Should be true
+        };
+        showEditOrCreateForm = true;
+    }
+
+    private void CloseEditOrCreateForm()
+    {
+        showEditOrCreateForm = false;
+        currentEditSnippet = null;
+        originalSnippetNameForEdit = null; // Clear this too
+    }
+
+    private async Task HandleSaveSnippet()
+    {
+        if (currentEditSnippet == null) return;
+
+        // Basic validation (name required) - DataAnnotationsValidator handles more
+        if (string.IsNullOrWhiteSpace(currentEditSnippet.Name))
+        {
+            // Optionally show a message, though DA Validator should handle it
+            return;
+        }
+
+        if (string.IsNullOrEmpty(originalSnippetNameForEdit) || !originalSnippetNameForEdit.Equals(currentEditSnippet.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            // This is a new snippet or a rename. Check if name already exists among user snippets.
+            var existingUserSnippet = SnippetService.Snippets.FirstOrDefault(s => s.IsUserDefined && s.Name.Equals(currentEditSnippet.Name, StringComparison.OrdinalIgnoreCase));
+            if (existingUserSnippet != null)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"A user-defined snippet with the name '{currentEditSnippet.Name}' already exists. Please choose a different name.");
+                return;
+            }
+        }
+
+        if (string.IsNullOrEmpty(originalSnippetNameForEdit)) // It's a new snippet
+        {
+            await SnippetService.AddUserSnippetAsync(currentEditSnippet);
+        }
+        else // It's an existing snippet being edited
+        {
+            await SnippetService.UpdateUserSnippetAsync(originalSnippetNameForEdit, currentEditSnippet);
+        }
+
+        CloseEditOrCreateForm();
+        await LoadSnippetsAsync(); // Refresh the list
+    }
+
+    private async Task ConfirmDeleteSnippet(CodeSnippet snippetToDelete)
+    {
+        if (!snippetToDelete.IsUserDefined) return; // Should not happen due to UI guards
+
+        bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete the snippet '{snippetToDelete.Name}'?");
+        if (confirmed)
+        {
+            await SnippetService.DeleteUserSnippetAsync(snippetToDelete.Name);
+            await LoadSnippetsAsync(); // Refresh the list
+        }
+    }
+
+    private void ViewSnippet(CodeSnippet snippetToView)
+    {
+        viewingSnippet = snippetToView;
+    }
+
+    private void CloseViewModal()
+    {
+        viewingSnippet = null;
+    }
+}

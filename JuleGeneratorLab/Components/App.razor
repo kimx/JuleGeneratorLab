@@ -16,6 +16,28 @@
 <body>
     <Routes @rendermode="InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
+    <script>
+      window.saveAsFile = function(fileName, byteBase64) {
+        var link = document.createElement('a');
+        link.download = fileName;
+        link.href = byteBase64;
+        document.body.appendChild(link); // Required for Firefox
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      window.localStorageHelper = {
+          setItem: function (key, value) {
+              localStorage.setItem(key, value);
+          },
+          getItem: function (key) {
+              return localStorage.getItem(key);
+          },
+          removeItem: function (key) {
+              localStorage.removeItem(key);
+          }
+      };
+    </script>
 </body>
 
 </html>

@@ -1,4 +1,6 @@
 using JuleGeneratorLab.Components;
+using JuleGeneratorLab.Models;
+using JuleGeneratorLab.Services;
 
 namespace JuleGeneratorLab
 {
@@ -11,6 +13,10 @@ namespace JuleGeneratorLab
             // Add services to the container.
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
+
+builder.Services.AddScoped<DatabaseSchemaReader>();
+builder.Services.AddScoped<CodeSnippetService>();
+builder.Services.AddScoped<CodeGenerationService>();
 
             var app = builder.Build();
 

@@ -1,0 +1,22 @@
+[
+  {
+    "Name": "C# Model Class (Scriban)",
+    "Description": "Generates a C# POCO class from a table using Scriban templates.",
+    "Template": "public class {{ ClassName }}\n{\n    {{ for col in SelectedColumns }}\n    public {{ map_db_type_to_csharp col.DataType }} {{ normalize_property_name col.ColumnName }} { get; set; }{{ if col.IsNullable && !(map_db_type_to_csharp col.DataType == \"string\" || map_db_type_to_csharp col.DataType == \"byte[]\" || map_db_type_to_csharp col.DataType == \"object\") }}?{{ end }}\n    {{ end }}\n}"
+  },
+  {
+    "Name": "Blazor EditForm Inputs (Scriban)",
+    "Description": "Generates InputText fields for a Blazor EditForm using Scriban.",
+    "Template": "{{ for col in SelectedColumns }}\n    <div class=\"form-group\">\n        <label for=\"{{ normalize_property_name col.ColumnName | string.downcase }}\">{{ normalize_property_name col.ColumnName }}:</label>\n        <InputText id=\"{{ normalize_property_name col.ColumnName | string.downcase }}\" class=\"form-control\" @bind-Value=\"Model.{{ normalize_property_name col.ColumnName }}\" />\n        <ValidationMessage For=\"@(() => Model.{{ normalize_property_name col.ColumnName }})\" />\n    </div>\n{{ end }}"
+  },
+  {
+    "Name": "Simple Console Output (Scriban)",
+    "Description": "Prints table and column names to console using Scriban.",
+    "Template": "Console.WriteLine(\"Table: {{ TableName }}\");\n{{ for col in SelectedColumns }}\nConsole.WriteLine(\"  Column: {{ col.ColumnName }} - Type: {{ col.DataType }}\");\n{{ end }}"
+  },
+  {
+    "Name": "C# Get All Service Method (EF Core) (Scriban)",
+    "Description": "Generates a C# method to get all records (Scriban).",
+    "Template": "public async Task<List<{{ ClassName }}>> GetAll{{ ClassName }}sAsync()\n{\n    // Assuming _dbContext is an instance of your Entity Framework Core DbContext\n    // and has a DbSet<{{ ClassName }}> named {{ ClassName }}s (e.g., public DbSet<User> Users { get; set; })\n    return await _dbContext.{{ ClassName }}s.ToListAsync();\n}"
+  }
+]
