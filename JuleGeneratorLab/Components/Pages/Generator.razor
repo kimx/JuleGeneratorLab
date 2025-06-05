@@ -168,6 +168,7 @@
 
     protected override async Task OnInitializedAsync() // Changed from OnInitialized
     {
+        await SnippetService.EnsureInitializedAsync(); // New line
         availableSnippets = SnippetService.Snippets;
         if (availableSnippets.Any())
         {

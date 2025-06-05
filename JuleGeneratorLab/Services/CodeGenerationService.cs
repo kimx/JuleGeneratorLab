@@ -1,6 +1,11 @@
 using JuleGeneratorLab.Models; // For CodeSnippet and ColumnDetail
 using System.Text;
-using System.Text.RegularExpressions; // For more advanced placeholder parsing if needed
+// using System.Text.RegularExpressions; // No longer needed for the core GenerateCode logic
+using System.Linq; // Keep for List.Any() and template.Messages.Select()
+using System.Collections.Generic; // Keep for List<object>
+using System; // Keep for Func, Exception, StringSplitOptions, DBNull etc.
+using Scriban;
+using Scriban.Runtime; // For ScriptObject and MemberRenamerDelegate
 
 namespace JuleGeneratorLab.Services
 {
@@ -8,103 +13,84 @@ namespace JuleGeneratorLab.Services
     {
         public string GenerateCode(string tableName, List<ColumnDetail> selectedColumns, CodeSnippet snippet)
         {
-            if (string.IsNullOrEmpty(tableName) || !selectedColumns.Any() || snippet == null)
+            if (string.IsNullOrEmpty(tableName) || (selectedColumns == null || !selectedColumns.Any()) || snippet == null || string.IsNullOrWhiteSpace(snippet.Template))
             {
-                return "// Error: Table name, columns, or snippet not provided.";
+                return "// Error: Table name, columns, or snippet template not provided or empty.";
             }
 
-            StringBuilder output = new StringBuilder(snippet.Template);
-            string className = NormalizeClassName(tableName);
-
-            // Simple global replacements
-            output.Replace("{ClassName}", className);
-            output.Replace("{ClassName}s", className + "s"); // Simple pluralization
-            output.Replace("{TableName}", tableName);
-            // Add more global placeholders as needed e.g. {Namespace}
-
-            // Handle property/field generation (example for C# Model or Blazor Inputs)
-            // This is a common pattern that might need more sophisticated parsing for different snippet types.
-            // The current snippets.json uses "Helper Snippets" in comments, which this basic version doesn't parse.
-            // This example directly replaces placeholders like {Properties} or {Fields}.
-
-            if (snippet.Name == "C# Model Class")
+            try
             {
-                StringBuilder properties = new StringBuilder();
+                var template = Template.Parse(snippet.Template);
+
+                if (template.HasErrors)
+                {
+                    var errors = template.Messages.Select(m => m.ToString()).ToList();
+                    return $"// Snippet Template Parsing Error(s):\n// {string.Join("\n// ", errors)}";
+                }
+
+                var scriptObject = new ScriptObject();
+                scriptObject.Add("TableName", tableName);
+                scriptObject.Add("ClassName", NormalizeClassName(tableName));
+
+                var columnList = new List<object>();
                 foreach (var col in selectedColumns)
                 {
-                    properties.AppendLine($"    public {MapColumnTypeToCSharp(col.DataType)} {NormalizePropertyName(col.ColumnName)} {{ get; set; }}");
+                    var colObj = new ScriptObject();
+                    colObj.Add("ColumnName", col.ColumnName);
+                    colObj.Add("DataType", col.DataType); // Original DB Data Type
+                    colObj.Add("IsPrimaryKey", col.IsPrimaryKey);
+                    colObj.Add("IsNullable", col.IsNullable);
+                    // CSharpDataType is now handled by the map_db_type_to_csharp function in the template
+                    columnList.Add(colObj);
                 }
-                output.Replace("{Properties}", properties.ToString().TrimEnd());
-            }
-            else if (snippet.Name == "Blazor EditForm Inputs")
-            {
-                StringBuilder fields = new StringBuilder();
-                foreach (var col in selectedColumns)
-                {
-                    string propertyName = NormalizePropertyName(col.ColumnName);
-                    string propertyNameLower = propertyName.ToLowerInvariant();
-                    fields.AppendLine($"    <div class=\"form-group\">");
-                    fields.AppendLine($"        <label for=\"{propertyNameLower}\">{propertyName}:</label>");
-                    fields.AppendLine($"        <InputText id=\"{propertyNameLower}\" class=\"form-control\" @bind-Value=\"Model.{propertyName}\" />");
-                    fields.AppendLine($"        <ValidationMessage For=\"@(() => Model.{propertyName})\" />");
-                    fields.AppendLine($"    </div>");
-                }
-                output.Replace("{Fields}", fields.ToString().TrimEnd());
-            }
-            else if (snippet.Name == "Simple Console Output")
-            {
-                // Example of a loop structure based on placeholders
-                // This requires the template to have {ColumnLoopStart} and {ColumnLoopEnd}
-                // And the content between them is the template for each column.
-                Regex loopRegex = new Regex(@"{ColumnLoopStart}(.*?){ColumnLoopEnd}", RegexOptions.Singleline);
-                Match loopMatch = loopRegex.Match(output.ToString());
+                scriptObject.Add("SelectedColumns", columnList);
 
-                if (loopMatch.Success)
-                {
-                    string loopTemplate = loopMatch.Groups[1].Value;
-                    StringBuilder allColumnsOutput = new StringBuilder();
-                    foreach (var col in selectedColumns)
-                    {
-                        StringBuilder singleColumnOutput = new StringBuilder(loopTemplate);
-                        singleColumnOutput.Replace("{ColumnName}", col.ColumnName);
-                        singleColumnOutput.Replace("{ColumnDataType}", col.DataType);
-                        // Add more column-specific placeholders as needed
-                        allColumnsOutput.Append(singleColumnOutput.ToString());
-                    }
-                    output = new StringBuilder(loopRegex.Replace(output.ToString(), allColumnsOutput.ToString()));
-                }
-            }
-            // Add more complex logic here for different snippet types and placeholders.
-            // This might involve parsing "sub-templates" or more structured placeholder definitions.
+                var context = new TemplateContext();
+                context.MemberRenamer = member => member.Name;
+                context.PushGlobal(scriptObject);
 
-            return output.ToString();
+                var utilityFunctions = new ScriptObject();
+                utilityFunctions.Import("normalize_property_name", new Func<string, string>(NormalizePropertyName));
+                utilityFunctions.Import("map_db_type_to_csharp", new Func<string, string>(MapColumnTypeToCSharp));
+
+                context.PushGlobal(utilityFunctions);
+
+                string result = template.Render(context);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return $"// Error during code generation: {ex.Message}\n// StackTrace: {ex.StackTrace}";
+            }
         }
 
         public string NormalizeClassName(string tableName)
         {
-            // Basic normalization: remove spaces, underscores, and capitalize parts
+            if (string.IsNullOrWhiteSpace(tableName)) return "DefaultClassName";
             string[] parts = tableName.Split(new[] { '_', ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
             for (int i = 0; i < parts.Length; i++)
             {
-                parts[i] = char.ToUpperInvariant(parts[i][0]) + parts[i].Substring(1);
+                parts[i] = char.ToUpperInvariant(parts[i][0]) + parts[i].Substring(1).ToLowerInvariant();
             }
             return string.Concat(parts);
         }
 
         public string NormalizePropertyName(string columnName)
         {
-            // Similar to class name, but typically starts with uppercase in C# properties
+            if (string.IsNullOrWhiteSpace(columnName)) return "DefaultPropertyName";
             string[] parts = columnName.Split(new[] { '_', ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
+            StringBuilder sb = new StringBuilder();
             for (int i = 0; i < parts.Length; i++)
             {
-                parts[i] = char.ToUpperInvariant(parts[i][0]) + parts[i].Substring(1);
+                // PascalCase for property names
+                sb.Append(char.ToUpperInvariant(parts[i][0]) + parts[i].Substring(1).ToLowerInvariant());
             }
-            return string.Concat(parts);
+            return sb.ToString();
         }
 
         public string MapColumnTypeToCSharp(string dbType)
         {
-            // This is a simplified mapping. Needs to be comprehensive.
+            if (string.IsNullOrWhiteSpace(dbType)) return "object"; // Fallback for empty or null dbType
             dbType = dbType.ToLowerInvariant();
             switch (dbType)
             {
@@ -134,18 +120,22 @@ namespace JuleGeneratorLab.Services
                 case "smallmoney":
                     return "decimal";
                 case "float":
-                    return "double"; // float in SQL is double precision
+                    return "double"; // SQL float is double precision
                 case "real":
-                    return "float";  // real in SQL is single precision
+                    return "float";  // SQL real is single precision
                 case "uniqueidentifier":
                     return "Guid";
                 case "varbinary":
                 case "binary":
                 case "image":
+                case "rowversion": // Common SQL Server type for optimistic concurrency
+                case "timestamp":  // Often an alias for rowversion
                     return "byte[]";
-                // Add more mappings as needed
+                // Add more specific mappings as identified
                 default:
-                    return "object"; // Fallback
+                    // Consider logging unknown db types if necessary
+                    Console.WriteLine($"Warning: Unknown DB type '{dbType}' mapped to 'object'.");
+                    return "object"; // Default fallback
             }
         }
     }
