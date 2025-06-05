@@ -30,6 +30,7 @@
                             {
                                 var result = Results[i];
                                 var tabId = $"tab-{i}";
+                                var index = i;
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link @(i == activeTabIndex ? "active" : "")"
                                             id="@($"btn-{tabId}")"
@@ -37,7 +38,7 @@
                                             role="tab"
                                             aria-controls="@tabId"
                                             aria-selected="@(i == activeTabIndex ? "true" : "false")"
-                                            @onclick="() => SetActiveTab(i)">
+                                            @onclick="() => SetActiveTab(index)">
                                         @result.SuggestedFileName
                                     </button>
                                 </li>
