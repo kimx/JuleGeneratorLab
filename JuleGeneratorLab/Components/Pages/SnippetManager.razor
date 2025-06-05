@@ -7,9 +7,10 @@
 
 <h3>Code Snippet Manager</h3>
 
-<div class="row my-3">
+<div class="row my-3 align-items-center">
     <div class="col-md-auto">
-        <button class="btn btn-primary" @onclick="ShowCreateForm">Create New Snippet</button>
+        <button class="btn btn-primary me-2" @onclick="ShowCreateForm">Create New Snippet</button>
+        <button class="btn btn-warning" @onclick="CallTestAlertAsync">Test JS Alert</button> {{! Temporary test button }}
     </div>
     <div class="col-md-auto ms-md-auto">
         <div class="btn-group" role="group" aria-label="Import/Export actions">
@@ -199,7 +200,7 @@ else
             <h5>2. Basic Syntax</h5>
             <ul>
                 <li><strong>Outputting values:</strong> Use double curly braces: <code>{{ ClassName }}</code> or <code>{{ col.ColumnName }}</code>.</li>
-        <li><strong>Comments:</strong> <code>{{# This is a comment #}}</code> or <code>{{## ... multi-line ... ##}}</code> (Note: Scriban's default might be just <code>##</code> for single line, check docs if specific comment syntax is needed beyond HTML comments in template text). Scriban typically treats text outside <code>{{ ... }}</code> ` as literal text.</li>
+                <li><strong>Comments:</strong> <code>{{# This is a comment #}}</code> or <code>{{## ... multi-line ... ##}}</code> (Note: Scriban's default might be just <code>##</code> for single line, check docs if specific comment syntax is needed beyond HTML comments in template text). Scriban typically treats text outside <code>{{ ... }}` as literal text.</li>
             </ul>
 
             <h5>3. Loops</h5>
@@ -455,6 +456,22 @@ else
         if (currentEditSnippet != null) // Ensure we are editing
         {
             await JSRuntime.InvokeVoidAsync("textUtils.insertTextAtCursor", "snippetTemplateArea", textToInsert);
+        }
+    }
+
+    private async Task CallTestAlertAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("textUtils.testAlert");
+        }
+        catch (Exception ex)
+        {
+            // Log or display the error to help diagnose
+            Console.WriteLine($"Error calling textUtils.testAlert: {ex.Message}");
+            feedbackMessage = $"Error calling testAlert: {ex.Message}";
+            feedbackMessageType = "danger";
+            StateHasChanged();
         }
     }
 }

@@ -19,5 +19,8 @@ window.textUtils = {
         var event = new Event('input', { bubbles: true });
         textArea.dispatchEvent(event);
         textArea.focus(); // Keep focus on the textarea
+    },
+    testAlert: function () { // New test function
+        alert('textUtils.js is loaded and testAlert() is called!');
     }
 };
