@@ -272,13 +272,13 @@ namespace JuleGeneratorLab.Services
             {
                 Console.WriteLine($"Error deserializing user snippets from JSON: {ex.Message}");
                 // Do not change _userSnippets on error
-                return Task.FromResult(false);
+                return false;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"An unexpected error occurred while loading user snippets from JSON: {ex.Message}");
                 // Do not change _userSnippets on error
-                return Task.FromResult(false);
+                return false;
             }
         }
     }
