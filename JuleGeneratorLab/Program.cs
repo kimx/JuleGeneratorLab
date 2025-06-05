@@ -18,6 +18,9 @@ builder.Services.AddScoped<DatabaseSchemaReader>();
 builder.Services.AddScoped<CodeSnippetService>();
 builder.Services.AddScoped<CodeGenerationService>();
 
+            builder.Services.AddScoped<ProjectService>();
+            builder.Services.AddScoped<DatabaseConnectionService>();
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.

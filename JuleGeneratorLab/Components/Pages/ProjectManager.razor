@@ -115,13 +115,11 @@ else
                             </InputSelect>
                             <ValidationMessage For="@(() => currentProject.DatabaseConnectionId)" />
                         </div>
-                        @* Placeholder for Snippet Set Selection - to be implemented later
                         <div class="mb-3">
-                            <label for="projectSnippetSet" class="form-label">Code Snippet Set</label>
-                            <InputText id="projectSnippetSet" class="form-control" @bind-Value="currentProject.SelectedSnippetSetId" placeholder="Enter Snippet Set ID (temp)" />
+                            <label for="projectSnippetSet" class="form-label">Code Snippet Set ID</label>
+                            <InputText id="projectSnippetSet" class="form-control" @bind-Value="currentProject.SelectedSnippetSetId" placeholder="Enter Snippet Set ID (optional)" />
                              <ValidationMessage For="@(() => currentProject.SelectedSnippetSetId)" />
                         </div>
-                        *@
                          @if (!string.IsNullOrWhiteSpace(errorMessage))
                         {
                             <div class="alert alert-danger mt-3" role="alert">
