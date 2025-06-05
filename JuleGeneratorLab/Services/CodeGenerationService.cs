@@ -80,7 +80,7 @@ namespace JuleGeneratorLab.Services
             return output.ToString();
         }
 
-        private string NormalizeClassName(string tableName)
+        public string NormalizeClassName(string tableName)
         {
             // Basic normalization: remove spaces, underscores, and capitalize parts
             string[] parts = tableName.Split(new[] { '_', ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
@@ -91,7 +91,7 @@ namespace JuleGeneratorLab.Services
             return string.Concat(parts);
         }
 
-        private string NormalizePropertyName(string columnName)
+        public string NormalizePropertyName(string columnName)
         {
             // Similar to class name, but typically starts with uppercase in C# properties
             string[] parts = columnName.Split(new[] { '_', ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
@@ -102,7 +102,7 @@ namespace JuleGeneratorLab.Services
             return string.Concat(parts);
         }
 
-        private string MapColumnTypeToCSharp(string dbType)
+        public string MapColumnTypeToCSharp(string dbType)
         {
             // This is a simplified mapping. Needs to be comprehensive.
             dbType = dbType.ToLowerInvariant();

@@ -15,7 +15,47 @@ namespace JuleGeneratorLab.Services
 
     public class DatabaseSchemaReader
     {
-        // ... GetTables method remains the same ...
+        public List<string> GetTables(string connectionString)
+        {
+            var tables = new List<string>();
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+                    DataTable schema = connection.GetSchema("Tables");
+                    foreach (DataRow row in schema.Rows)
+                    {
+                        string? schemaName = row["TABLE_SCHEMA"] as string;
+                        string? tableName = row["TABLE_NAME"] as string;
+                        string? tableType = row["TABLE_TYPE"] as string;
+
+                        // We are interested in base tables, not views or system tables
+                        if (tableType == "BASE TABLE" && !string.IsNullOrEmpty(tableName))
+                        {
+                            // Optional: Exclude common system/diagram schemas if necessary
+                            if (schemaName != "sys" && schemaName != "INFORMATION_SCHEMA")
+                            {
+                                tables.Add(string.IsNullOrEmpty(schemaName) || schemaName == "dbo" ? tableName : $"{schemaName}.{tableName}");
+                            }
+                        }
+                    }
+                }
+                tables.Sort(); // Sort alphabetically
+            }
+            catch (SqlException ex)
+            {
+                // Log the exception or handle it as per application's error handling strategy
+                // For now, rethrow or wrap it to be caught by the UI layer
+                throw new Exception($"SQL Error: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                // Catch other potential exceptions (e.g., invalid connection string format)
+                throw new Exception($"Error connecting to database or retrieving tables: {ex.Message}", ex);
+            }
+            return tables;
+        }
 
         public List<ColumnDetail> GetColumns(string connectionString, string tableNameWithSchema)
         {
