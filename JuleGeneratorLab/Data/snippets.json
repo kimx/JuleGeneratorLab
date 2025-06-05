@@ -1,0 +1,22 @@
+[
+  {
+    "Name": "C# Model Class",
+    "Description": "Generates a C# POCO class from a table.",
+    "Template": "public class {ClassName}\n{\n{Properties}\n}\n\n// Helper Snippet for Properties (to be processed by generator logic):\n// PropertyTemplate: public {DataType} {PropertyName} { get; set; }"
+  },
+  {
+    "Name": "Blazor EditForm Inputs",
+    "Description": "Generates InputText fields for a Blazor EditForm.",
+    "Template": "{Fields}\n\n// Helper Snippet for Fields (to be processed by generator logic):\n// FieldTemplate: <div class=\"form-group\">\n//     <label for=\"{PropertyNameLower}\">{PropertyName}:</label>\n//     <InputText id=\"{PropertyNameLower}\" class=\"form-control\" @bind-Value=\"Model.{PropertyName}\" />\n//     <ValidationMessage For=\"@(() => Model.{PropertyName})\" />\n// </div>"
+  },
+  {
+    "Name": "Simple Console Output",
+    "Description": "Prints table and column names to console.",
+    "Template": "Console.WriteLine(\"Table: {TableName}\");\n{ColumnLoopStart}\nConsole.WriteLine(\"  Column: {ColumnName} - Type: {ColumnDataType}\");\n{ColumnLoopEnd}"
+  },
+  {
+    "Name": "C# Get All Service Method (EF Core)",
+    "Description": "Generates a C# method to get all records for a class (assumes EF Core DbContext).",
+    "Template": "public async Task<List<{ClassName}>> GetAll{ClassName}sAsync()\n{\n    // Assuming _dbContext is an instance of your Entity Framework Core DbContext\n    // and has a DbSet<{ClassName}> named {ClassName}s (e.g., public DbSet<User> Users { get; set; })\n    return await _dbContext.{ClassName}s.ToListAsync();\n}"
+  }
+]

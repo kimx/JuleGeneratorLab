@@ -1,0 +1,372 @@
+@page "/generator"
+@using JuleGeneratorLab.Services
+@using JuleGeneratorLab.Models
+@inject DatabaseSchemaReader DbSchemaReader
+@inject CodeSnippetService SnippetService
+@inject CodeGenerationService CodeGenService
+@inject IJSRuntime JSRuntime
+
+<h3>Code Generator</h3>
+
+<div class="container-fluid">
+    <!-- Row 1: Database Connection -->
+    <div class="row p-2 my-2 border rounded">
+        <div class="col-12">
+            <h4>Database Connection</h4>
+                    <div class="mb-3">
+                        <label for="serverName" class="form-label">Server Name</label>
+                        <input type="text" class="form-control" id="serverName" @bind="connectionDetails.ServerName" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="databaseName" class="form-label">Database Name</label>
+                        <input type="text" class="form-control" id="databaseName" @bind="connectionDetails.DatabaseName" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="authType" class="form-label">Authentication Type</label>
+                        <select class="form-select" id="authType" @bind="connectionDetails.AuthenticationType">
+                            <option value="windows">Windows Authentication</option>
+                            <option value="sql">SQL Server Authentication</option>
+                        </select>
+                    </div>
+                    @if (connectionDetails.AuthenticationType == "sql")
+                    {
+                        <div class="mb-3">
+                            <label for="userName" class="form-label">User Name</label>
+                            <input type="text" class="form-control" id="userName" @bind="connectionDetails.UserName" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" @bind="connectionDetails.Password" />
+                        </div>
+                    }
+                    <button class="btn btn-success" @onclick="ConnectToDatabase">Connect</button>
+                    @if (!string.IsNullOrEmpty(connectionStatus))
+                    {
+                        <div class="mt-2 alert @(isConnectionSuccess ? "alert-success" : "alert-danger")">
+                            @connectionStatus
+                        </div>
+                    }
+        </div>
+    </div>
+
+    <!-- Row 2: Main Area -->
+    <div class="row p-2 my-2 border rounded">
+        <!-- Column 1: Database Schema Explorer -->
+        <div class="col-md-5 border-end">
+            <h4>Database Schema</h4>
+                    @if (tables.Any())
+                    {
+                        <div class="list-group" style="max-height: 300px; overflow-y: auto;">
+                            @foreach (var table in tables)
+                            {
+                                <button type="button"
+                                        class="list-group-item list-group-item-action @(currentSelectedTable == table ? "active" : "")"
+                                        @onclick="() => SelectTableAndLoadColumns(table)">
+                                    @table
+                                </button>
+                            }
+                        </div>
+                    }
+                    else if (isConnectionSuccess)
+                    {
+                        <p>No tables found.</p>
+                    }
+                    else
+                    {
+                        <p>Connect to a database to see tables.</p>
+                    }
+
+                    @if (currentSelectedTable != null)
+                    {
+                        <h5 class="mt-3">Columns for @currentSelectedTable</h5>
+                        @if (!string.IsNullOrEmpty(columnSelectionError))
+                        {
+                            <div class="alert alert-danger mt-2">@columnSelectionError</div>
+                        }
+                        @if (columnsForSelectedTable.Any())
+                        {
+                            <div class="list-group mt-2" style="max-height: 400px; overflow-y: auto;">
+                                @foreach (var column in columnsForSelectedTable)
+                                {
+                                    <label class="list-group-item">
+                                        <input type="checkbox" class="form-check-input me-1"
+                                               checked="@(selectedColumns.ContainsKey(column.ColumnName) ? selectedColumns[column.ColumnName] : false)"
+                                               @onchange="() => ToggleColumnSelection(column.ColumnName)" />
+                                        @column.ColumnName <small class="text-muted">(@column.DataType @(column.IsPrimaryKey ? "PK" : "") @(column.IsNullable ? "?" : ""))</small>
+                                    </label>
+                                }
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary mt-2" @onclick="() => SelectAllColumns(true)">Select All</button>
+                            <button class="btn btn-sm btn-outline-secondary mt-2" @onclick="() => SelectAllColumns(false)">Deselect All</button>
+                        }
+                        else if (string.IsNullOrEmpty(columnSelectionError))
+                        {
+                            <p>No columns found for this table or still loading.</p>
+                        }
+                    }
+        </div>
+
+        <!-- Column 2: Snippet Selection & Configuration -->
+        <div class="col-md-7">
+            <h4>Snippet Configuration</h4>
+                    <div class="mb-3">
+                        <label for="snippetSelector" class="form-label">Select Code Snippet:</label>
+                        <select class="form-select" id="snippetSelector" @bind="selectedSnippetName">
+                            @if (availableSnippets.Any())
+                            {
+                                @foreach (var snippet in availableSnippets)
+                                {
+                                    <option value="@snippet.Name">@snippet.Name - @snippet.Description</option>
+                                }
+                            }
+                            else
+                            {
+                                <option value="">No snippets loaded</option>
+                            }
+                        </select>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(selectedSnippetName))
+                    {
+                        var selectedSnippet = availableSnippets.FirstOrDefault(s => s.Name == selectedSnippetName);
+                        if (selectedSnippet != null)
+                        {
+                            <div class="mt-2">
+                                <h6>Snippet Preview (Template):</h6>
+                                <pre style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; border-radius: 4px;"><code>@selectedSnippet.Template</code></pre>
+                            </div>
+                        }
+                    }
+                    <button class="btn btn-primary mt-2" @onclick="HandleGenerateCode">Generate Code</button>
+        </div>
+    </div>
+
+    <!-- Row 3: Generated Code -->
+    <div class="row p-2 my-2 border rounded">
+        <div class="col-12">
+            <h4>Generated Code</h4>
+                    <textarea class="form-control" rows="10" readonly>@generatedCode</textarea>
+                    <button class="btn btn-info mt-2" @onclick="CopyToClipboard">Copy to Clipboard</button>
+                    <button class="btn btn-success mt-2" @onclick="DownloadGeneratedCode">Download as File</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ConnectionDetails connectionDetails = new ConnectionDetails();
+    private string? connectionStatus;
+    private bool isConnectionSuccess = false;
+    private List<string> tables = new List<string>();
+
+    private string? currentSelectedTable;
+    private List<ColumnDetail> columnsForSelectedTable = new List<ColumnDetail>();
+    private Dictionary<string, bool> selectedColumns = new Dictionary<string, bool>(); // ColumnName -> IsSelected
+    private string? columnSelectionError;
+
+    private List<CodeSnippet> availableSnippets = new List<CodeSnippet>();
+    private string? selectedSnippetName; // To store the name of the selected snippet
+
+    protected override async Task OnInitializedAsync() // Changed from OnInitialized
+    {
+        availableSnippets = SnippetService.Snippets;
+        if (availableSnippets.Any())
+        {
+            selectedSnippetName = availableSnippets.First().Name; // Default to first snippet
+        }
+        // Any other async initialization logic can go here
+        await base.OnInitializedAsync(); // Call base method
+    }
+
+    private class ConnectionDetails
+    {
+        public string ServerName { get; set; } = "localhost"; // Default value
+        public string DatabaseName { get; set; } = "";
+        public string AuthenticationType { get; set; } = "windows"; // Default to Windows Auth
+        public string UserName { get; set; } = "";
+        public string Password { get; set; } = "";
+
+        public string BuildConnectionString()
+        {
+            if (AuthenticationType == "windows")
+            {
+                return $"Server={ServerName};Database={DatabaseName};Trusted_Connection=True;TrustServerCertificate=True;";
+            }
+            else // SQL Server Authentication
+            {
+                return $"Server={ServerName};Database={DatabaseName};User ID={UserName};Password={Password};TrustServerCertificate=True;";
+            }
+        }
+    }
+
+    private async Task ConnectToDatabase()
+    {
+        connectionStatus = "Connecting...";
+        isConnectionSuccess = false;
+        tables.Clear();
+        currentSelectedTable = null;
+        columnsForSelectedTable.Clear();
+        selectedColumns.Clear();
+        columnSelectionError = null;
+
+        try
+        {
+            string connectionString = connectionDetails.BuildConnectionString();
+            var fetchedTables = DbSchemaReader.GetTables(connectionString); // This will now make a real call
+
+            if (fetchedTables != null && fetchedTables.Any())
+            {
+                tables = fetchedTables;
+                connectionStatus = $"Successfully connected to '{connectionDetails.DatabaseName}' and retrieved {tables.Count} table(s).";
+                isConnectionSuccess = true;
+            }
+            else
+            {
+                connectionStatus = $"Connected to '{connectionDetails.DatabaseName}', but no user tables were found.";
+                isConnectionSuccess = true; // Connection itself was successful
+            }
+        }
+        catch (Exception ex) // Catch exceptions thrown by GetTables
+        {
+            connectionStatus = $"Error: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                connectionStatus += $" Inner Exception: {ex.InnerException.Message}";
+            }
+            isConnectionSuccess = false;
+        }
+        await InvokeAsync(StateHasChanged); // Ensure UI updates after async operations
+    }
+
+    private async Task SelectTableAndLoadColumns(string tableName)
+    {
+        currentSelectedTable = tableName;
+        columnsForSelectedTable.Clear();
+        selectedColumns.Clear();
+        columnSelectionError = null;
+
+        if (string.IsNullOrEmpty(currentSelectedTable))
+        {
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            string connectionString = connectionDetails.BuildConnectionString();
+            columnsForSelectedTable = DbSchemaReader.GetColumns(connectionString, currentSelectedTable);
+            foreach (var column in columnsForSelectedTable)
+            {
+                selectedColumns.Add(column.ColumnName, true); // Default to select all columns initially
+            }
+        }
+        catch (Exception ex)
+        {
+            columnSelectionError = $"Error loading columns for table '{currentSelectedTable}': {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                columnSelectionError += $" Inner: {ex.InnerException.Message}";
+            }
+        }
+        StateHasChanged();
+    }
+
+    private void ToggleColumnSelection(string columnName)
+    {
+        if (selectedColumns.ContainsKey(columnName))
+        {
+            selectedColumns[columnName] = !selectedColumns[columnName];
+            StateHasChanged();
+        }
+    }
+
+    private void SelectAllColumns(bool select)
+    {
+        if (columnsForSelectedTable.Any())
+        {
+            foreach (var column in columnsForSelectedTable)
+            {
+                selectedColumns[column.ColumnName] = select;
+            }
+            StateHasChanged();
+        }
+    }
+
+    private string generatedCode = "// Generated code will appear here.";
+
+    private async Task HandleGenerateCode()
+    {
+        if (string.IsNullOrEmpty(currentSelectedTable) ||
+            !selectedColumns.Values.Any(isSelected => isSelected) || // Check if any column is actually selected
+            string.IsNullOrEmpty(selectedSnippetName))
+        {
+            generatedCode = "// Please select a table, at least one column, and a snippet first.";
+            return;
+        }
+
+        var snippetToUse = availableSnippets.FirstOrDefault(s => s.Name == selectedSnippetName);
+        if (snippetToUse == null)
+        {
+            generatedCode = "// Selected snippet not found.";
+            return;
+        }
+
+        // Get only the details of columns that are marked as true in selectedColumns
+        var columnsToGenerate = columnsForSelectedTable
+                                  .Where(col => selectedColumns.ContainsKey(col.ColumnName) && selectedColumns[col.ColumnName])
+                                  .ToList();
+
+        if (!columnsToGenerate.Any())
+        {
+             generatedCode = "// No columns are selected for code generation.";
+            return;
+        }
+
+        generatedCode = CodeGenService.GenerateCode(currentSelectedTable, columnsToGenerate, snippetToUse);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CopyToClipboard()
+    {
+        if (!string.IsNullOrEmpty(generatedCode))
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", generatedCode);
+            // Optionally, show a temporary message like "Copied!"
+        }
+    }
+
+    private async Task DownloadGeneratedCode()
+    {
+        if (string.IsNullOrEmpty(generatedCode) || generatedCode.StartsWith("//")) // Avoid downloading placeholder/error messages
+        {
+            // Optionally, inform the user that there's nothing valid to download
+            // For example, by setting a temporary status message
+            return;
+        }
+
+        var snippetToUse = availableSnippets.FirstOrDefault(s => s.Name == selectedSnippetName);
+        string fileName = "GeneratedCode.txt"; // Default filename
+
+        if (snippetToUse != null)
+        {
+            string baseName = string.IsNullOrEmpty(currentSelectedTable) ? "MyCode" : CodeGenService.NormalizeClassName(currentSelectedTable);
+            if (snippetToUse.Name.Contains("C# Model"))
+            {
+                fileName = $"{baseName}.cs";
+            }
+            else if (snippetToUse.Name.Contains("Blazor") || snippetToUse.Name.Contains("Razor"))
+            {
+                fileName = $"{baseName}Component.razor"; // Or derive more specifically
+            }
+            // Add more specific filename logic based on snippet type if desired
+        }
+
+        // Convert string to byte array
+        byte[] fileBytes = System.Text.Encoding.UTF8.GetBytes(generatedCode);
+
+        // Invoke JavaScript to trigger download
+        // Create a helper JS function if this becomes complex or repeated
+        // For a single use like this, direct invocation is fine.
+        var base64 = Convert.ToBase64String(fileBytes);
+        await JSRuntime.InvokeVoidAsync("saveAsFile", fileName, $"data:application/octet-stream;base64,{base64}");
+    }
+}
