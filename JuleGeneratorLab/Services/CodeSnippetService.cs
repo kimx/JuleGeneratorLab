@@ -11,7 +11,6 @@ namespace JuleGeneratorLab.Services
     {
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly IJSRuntime _jsRuntime;
-        private const string UserSnippetsLocalStorageKey = "blazorCodeGenerator_userSnippets";
 
         public List<CodeSnippet> Snippets { get; private set; } = new List<CodeSnippet>();
         private List<CodeSnippet> _defaultSnippets = new List<CodeSnippet>();
@@ -87,26 +86,11 @@ namespace JuleGeneratorLab.Services
 
         private async Task LoadUserSnippetsAsync()
         {
-            try
-            {
-                string? jsonContent = await _jsRuntime.InvokeAsync<string?>("localStorageHelper.getItem", UserSnippetsLocalStorageKey);
-                if (!string.IsNullOrEmpty(jsonContent))
-                {
-                    var snippets = JsonSerializer.Deserialize<List<CodeSnippet>>(jsonContent, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                    if (snippets != null)
-                    {
-                        _userSnippets = snippets.Select(s => { s.IsUserDefined = true; return s; }).ToList();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error loading user snippets: {ex.Message}");
-                // Optionally add an error snippet to _userSnippets or handle differently
-            }
+            // User snippets will be loaded via upload or other file-based mechanisms.
+            // For now, initialize as an empty list.
+            _userSnippets = new List<CodeSnippet>();
+            // Ensure await is used if any async operations were to be added here in the future.
+            await Task.CompletedTask;
         }
 
         private void MergeSnippets()
@@ -125,17 +109,11 @@ namespace JuleGeneratorLab.Services
 
         public async Task SaveUserSnippetsAsync()
         {
-            try
-            {
-                string jsonContent = JsonSerializer.Serialize(_userSnippets, new JsonSerializerOptions { WriteIndented = true });
-                await _jsRuntime.InvokeVoidAsync("localStorageHelper.setItem", UserSnippetsLocalStorageKey, jsonContent);
-                MergeSnippets(); // Refresh the public Snippets list
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error saving user snippets: {ex.Message}");
-                // Handle or throw
-            }
+            // This method will be repurposed or used for download functionality.
+            // For now, it does nothing or could trigger a download if implemented here.
+            MergeSnippets(); // Refresh the public Snippets list after any in-memory changes.
+            // Ensure await is used if any async operations were to be added here in the future.
+            await Task.CompletedTask;
         }
 
         public async Task AddUserSnippetAsync(CodeSnippet snippet)
@@ -161,6 +139,64 @@ namespace JuleGeneratorLab.Services
         {
             _userSnippets.RemoveAll(s => s.Name == snippetName);
             await SaveUserSnippetsAsync();
+        }
+
+        public Task<string> GetUserSnippetsAsJsonAsync()
+        {
+            try
+            {
+                string jsonContent = JsonSerializer.Serialize(_userSnippets, new JsonSerializerOptions { WriteIndented = true });
+                return Task.FromResult(jsonContent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error serializing user snippets: {ex.Message}");
+                return Task.FromResult("[]"); // Return empty JSON array on error
+            }
+        }
+
+        public Task<bool> LoadUserSnippetsFromJsonAsync(string jsonContent)
+        {
+            if (string.IsNullOrWhiteSpace(jsonContent))
+            {
+                // Consider if this should clear existing user snippets or be a silent no-op
+                // For now, let's assume an empty/whitespace string means "clear user snippets"
+                _userSnippets = new List<CodeSnippet>();
+                MergeSnippets();
+                return Task.FromResult(true); // Successfully "loaded" empty set
+            }
+
+            try
+            {
+                var snippets = JsonSerializer.Deserialize<List<CodeSnippet>>(jsonContent, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (snippets != null)
+                {
+                    _userSnippets = snippets.Select(s => { s.IsUserDefined = true; return s; }).ToList();
+                }
+                else
+                {
+                    // If deserialization results in null (e.g. JSON was "null")
+                    _userSnippets = new List<CodeSnippet>();
+                }
+                MergeSnippets();
+                return Task.FromResult(true);
+            }
+            catch (JsonException ex)
+            {
+                Console.WriteLine($"Error deserializing user snippets from JSON: {ex.Message}");
+                // Do not change _userSnippets on error
+                return Task.FromResult(false);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An unexpected error occurred while loading user snippets from JSON: {ex.Message}");
+                // Do not change _userSnippets on error
+                return Task.FromResult(false);
+            }
         }
     }
 }
