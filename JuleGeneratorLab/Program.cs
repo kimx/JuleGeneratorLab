@@ -15,7 +15,7 @@ namespace JuleGeneratorLab
                 .AddInteractiveServerComponents();
 
 builder.Services.AddScoped<DatabaseSchemaReader>();
-builder.Services.AddSingleton<CodeSnippetService>();
+builder.Services.AddScoped<CodeSnippetService>();
 builder.Services.AddScoped<CodeGenerationService>();
 
             var app = builder.Build();
