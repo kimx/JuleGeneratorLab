@@ -21,7 +21,7 @@ namespace JuleGeneratorLab.Models
         public Guid? DatabaseConnectionId { get; set; } // Foreign key for DatabaseConnection
         // public virtual DatabaseConnection? DatabaseConnection { get; set; } // Navigation property
 
-        public Guid? SelectedSnippetSetId { get; set; } // Foreign key for a potential SnippetSet/Collection
+        public List<Guid> SelectedSnippetSetIds { get; set; } = new List<Guid>();
         // public virtual SnippetSet? SelectedSnippetSet { get; set; } // Navigation property
 
         public DateTime CreatedAt { get; set; }
@@ -32,6 +32,7 @@ namespace JuleGeneratorLab.Models
             Id = Guid.NewGuid();
             CreatedAt = DateTime.UtcNow;
             UpdatedAt = DateTime.UtcNow;
+            // SelectedSnippetSetIds is already initialized by property initializer
         }
     }
 }

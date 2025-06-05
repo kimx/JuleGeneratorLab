@@ -56,11 +56,11 @@ else
                         <td>@conn.DatabaseType</td>
                         <td>@conn.UpdatedAt.ToLocalTime().ToString("g")</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditConnectionModal(conn.Id)" title="Edit">
-                                <i class="bi bi-pencil-square"></i>
+                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditConnectionModal(conn.Id)" title="Edit Connection">
+                                <i class="bi bi-pencil-square"></i> Edit
                             </button>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ShowDeleteConfirmModal(conn.Id)" title="Delete">
-                                <i class="bi bi-trash3-fill"></i>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ShowDeleteConfirmModal(conn.Id)" title="Delete Connection">
+                                <i class="bi bi-trash3-fill"></i> Delete
                             </button>
                             @* Optional: Test Connection Button
                             <button class="btn btn-sm btn-outline-info" @onclick="() => TestConnection(conn.Id)" title="Test Connection">

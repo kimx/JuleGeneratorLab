@@ -321,34 +321,48 @@
                 isConnectionSuccess = false;
             }
 
-            // Snippet Filtering Logic:
-            if (currentLoadedProject.SelectedSnippetSetId.HasValue && currentLoadedProject.SelectedSnippetSetId.Value != Guid.Empty)
+            // Snippet Filtering Logic for Multiple Sets:
+            if (currentLoadedProject.SelectedSnippetSetIds != null && currentLoadedProject.SelectedSnippetSetIds.Any())
             {
-                var snippetSet = await SnippetSetSvc.GetSnippetSetByIdAsync(currentLoadedProject.SelectedSnippetSetId.Value);
-                if (snippetSet != null && snippetSet.SnippetNames.Any())
+                var combinedSnippetNames = new HashSet<string>();
+                List<string> foundSetNames = new List<string>();
+
+                foreach (var setId in currentLoadedProject.SelectedSnippetSetIds)
+                {
+                    var snippetSet = await SnippetSetSvc.GetSnippetSetByIdAsync(setId);
+                    if (snippetSet != null)
+                    {
+                        foundSetNames.Add(snippetSet.Name);
+                        foreach (var snippetName in snippetSet.SnippetNames)
+                        {
+                            combinedSnippetNames.Add(snippetName);
+                        }
+                    }
+                }
+
+                if (combinedSnippetNames.Any())
                 {
                     var allGlobalSnippets = SnippetService.Snippets;
-                    availableSnippets = allGlobalSnippets.Where(s => snippetSet.SnippetNames.Contains(s.Name)).ToList();
-                    projectLoadStatus += $" Using snippet set '{snippetSet.Name}' ({availableSnippets.Count} snippets).";
-
+                    availableSnippets = allGlobalSnippets.Where(s => combinedSnippetNames.Contains(s.Name)).ToList();
+                    projectLoadStatus += $" Using snippet sets: '{string.Join(", ", foundSetNames)}' ({availableSnippets.Count} unique snippets).";
                     if (!availableSnippets.Any())
                     {
-                        projectLoadStatus += " The selected snippet set is empty or contains no matching loaded snippets.";
+                        projectLoadStatus += " The selected snippet set(s) are empty or contain no matching loaded snippets.";
                     }
                 }
                 else
                 {
-                    projectLoadStatus += " Selected snippet set not found or is empty. Showing all snippets.";
-                    availableSnippets = SnippetService.Snippets;
+                    projectLoadStatus += " Selected snippet set(s) not found or are empty. Showing all snippets.";
+                    availableSnippets = SnippetService.Snippets; // Show all
                 }
             }
             else
             {
                 projectLoadStatus += " No specific snippet set selected. Showing all snippets.";
-                availableSnippets = SnippetService.Snippets;
+                availableSnippets = SnippetService.Snippets; // Show all
             }
 
-            // Reset selected snippet if it's no longer in the (potentially filtered) list
+            // Reset selected snippet if it's no longer in the (potentially filtered) list (this part is mostly the same)
             if (availableSnippets.Any())
             {
                 if (string.IsNullOrEmpty(selectedSnippetName) || !availableSnippets.Any(s => s.Name == selectedSnippetName))

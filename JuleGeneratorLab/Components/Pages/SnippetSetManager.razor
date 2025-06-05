@@ -53,11 +53,11 @@ else
                         <td>@sSet.SnippetNames.Count</td>
                         <td>@sSet.UpdatedAt.ToLocalTime().ToString("g")</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(sSet.Id)" title="Edit">
-                                <i class="bi bi-pencil-square"></i>
+                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(sSet.Id)" title="Edit Snippet Set">
+                                <i class="bi bi-pencil-square"></i> Edit
                             </button>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ShowDeleteConfirmModal(sSet.Id)" title="Delete">
-                                <i class="bi bi-trash3-fill"></i>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ShowDeleteConfirmModal(sSet.Id)" title="Delete Snippet Set">
+                                <i class="bi bi-trash3-fill"></i> Delete
                             </button>
                         </td>
                     </tr>

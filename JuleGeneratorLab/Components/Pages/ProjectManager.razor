@@ -59,11 +59,11 @@ else
                         <td>@(GetConnectionName(project.DatabaseConnectionId))</td>
                         <td>@project.UpdatedAt.ToLocalTime().ToString("g")</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditProjectModal(project.Id)" title="Edit">
-                                <i class="bi bi-pencil-square"></i>
+                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditProjectModal(project.Id)" title="Edit Project">
+                                <i class="bi bi-pencil-square"></i> Edit
                             </button>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ShowDeleteConfirmModal(project.Id)" title="Delete">
-                                <i class="bi bi-trash3-fill"></i>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ShowDeleteConfirmModal(project.Id)" title="Delete Project">
+                                <i class="bi bi-trash3-fill"></i> Delete
                             </button>
                         </td>
                     </tr>
@@ -116,18 +116,28 @@ else
                             <ValidationMessage For="@(() => currentProject.DatabaseConnectionId)" />
                         </div>
                         <div class="mb-3">
-                            <label for="projectSnippetSet" class="form-label">Code Snippet Set</label> @* Changed label back *@
-                            <InputSelect id="projectSnippetSet" class="form-select" @bind-Value="currentProject.SelectedSnippetSetId">
-                                <option value="">-- Select Snippet Set (Optional) --</option>
-                                @if (availableSnippetSets != null)
-                                {
-                                    @foreach (var sSet in availableSnippetSets)
+                            <label class="form-label">Code Snippet Sets (Select Multiple)</label>
+                            @if (availableSnippetSets == null || !availableSnippetSets.Any())
+                            {
+                                <p class="text-muted">No snippet sets available. Please create some in the Snippet Set Manager.</p>
+                            }
+                            else
+                            {
+                                <div class="list-group" style="max-height: 200px; overflow-y: auto; border: 1px solid #ced4da; border-radius: .25rem;">
+                                    @foreach (var sSet in availableSnippetSets.OrderBy(s => s.Name))
                                     {
-                                        <option value="@sSet.Id">@sSet.Name</option>
+                                        <label class="list-group-item list-group-item-action">
+                                            <input type="checkbox"
+                                                   class="form-check-input me-2"
+                                                   checked="@(selectedSnippetSetStates.ContainsKey(sSet.Id) ? selectedSnippetSetStates[sSet.Id] : false)"
+                                                   @onchange="() => ToggleSnippetSetSelectionInModal(sSet.Id)" />
+                                            @sSet.Name
+                                            <small class="text-muted ms-2 d-block d-sm-inline">(@sSet.Description)</small>
+                                        </label>
                                     }
-                                }
-                            </InputSelect>
-                            <ValidationMessage For="@(() => currentProject.SelectedSnippetSetId)" /> @* Re-enabled *@
+                                </div>
+                            }
+                            @* No direct ValidationMessage for a list of checkboxes like this easily, manual validation if needed *@
                         </div>
                          @if (!string.IsNullOrWhiteSpace(errorMessage))
                         {

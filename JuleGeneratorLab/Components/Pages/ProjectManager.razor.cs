@@ -20,6 +20,7 @@ namespace JuleGeneratorLab.Components.Pages
         private Project currentProject = new(); // For Add/Edit form
         private Project? projectToDelete; // For delete confirmation
         // private string currentProjectSnippetSetIdString = string.Empty; // Removed
+        private Dictionary<Guid, bool> selectedSnippetSetStates = new Dictionary<Guid, bool>();
 
         private bool showProjectModal = false;
         private bool showDeleteConfirmModal = false;
@@ -84,8 +85,15 @@ namespace JuleGeneratorLab.Components.Pages
 
         private void ShowAddProjectModal()
         {
-            currentProject = new Project { Id = Guid.Empty, SelectedSnippetSetId = null }; // Ensure a new project object for add, explicitly nullify SelectedSnippetSetId
-            // currentProjectSnippetSetIdString = string.Empty; // Removed
+            currentProject = new Project { Id = Guid.Empty }; // Model initializes SelectedSnippetSetIds
+            selectedSnippetSetStates.Clear();
+            if (availableSnippetSets != null)
+            {
+                foreach (var sSet in availableSnippetSets)
+                {
+                    selectedSnippetSetStates[sSet.Id] = false; // Default to unchecked
+                }
+            }
             errorMessage = null;
             showProjectModal = true;
         }
@@ -103,11 +111,18 @@ namespace JuleGeneratorLab.Components.Pages
                     Namespace = project.Namespace,
                     Description = project.Description,
                     DatabaseConnectionId = project.DatabaseConnectionId,
-                    SelectedSnippetSetId = project.SelectedSnippetSetId, // This is correct
+                    SelectedSnippetSetIds = new List<Guid>(project.SelectedSnippetSetIds ?? new List<Guid>()), // Ensure it's a copy
                     CreatedAt = project.CreatedAt,
                     UpdatedAt = project.UpdatedAt
                 };
-                // currentProjectSnippetSetIdString = project.SelectedSnippetSetId?.ToString() ?? string.Empty; // Removed
+                selectedSnippetSetStates.Clear();
+                if (availableSnippetSets != null)
+                {
+                    foreach (var sSet in availableSnippetSets)
+                    {
+                        selectedSnippetSetStates[sSet.Id] = currentProject.SelectedSnippetSetIds?.Contains(sSet.Id) ?? false;
+                    }
+                }
                 errorMessage = null;
                 showProjectModal = true;
             }
@@ -128,8 +143,14 @@ namespace JuleGeneratorLab.Components.Pages
         {
             errorMessage = null;
 
-            // Removed Guid parsing logic for currentProjectSnippetSetIdString
-            // currentProject.SelectedSnippetSetId is now directly bound by InputSelect<Guid?>
+            currentProject.SelectedSnippetSetIds.Clear();
+            foreach (var entry in selectedSnippetSetStates)
+            {
+                if (entry.Value) // If checked
+                {
+                    currentProject.SelectedSnippetSetIds.Add(entry.Key);
+                }
+            }
 
             try
             {
@@ -148,6 +169,14 @@ namespace JuleGeneratorLab.Components.Pages
             {
                 errorMessage = $"Error saving project: {ex.Message}";
                 // Keep modal open if error to show message
+            }
+        }
+
+        private void ToggleSnippetSetSelectionInModal(Guid setId)
+        {
+            if (selectedSnippetSetStates.ContainsKey(setId))
+            {
+                selectedSnippetSetStates[setId] = !selectedSnippetSetStates[setId];
             }
         }
 

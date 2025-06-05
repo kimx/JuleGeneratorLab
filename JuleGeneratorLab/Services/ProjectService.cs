@@ -157,7 +157,7 @@ namespace JuleGeneratorLab.Services
             existingProject.Namespace = project.Namespace;
             existingProject.Description = project.Description;
             existingProject.DatabaseConnectionId = project.DatabaseConnectionId;
-            existingProject.SelectedSnippetSetId = project.SelectedSnippetSetId;
+            existingProject.SelectedSnippetSetIds = project.SelectedSnippetSetIds ?? new List<Guid>();
             existingProject.UpdatedAt = DateTime.UtcNow;
 
             await SaveProjectsAsync();

@@ -56,7 +56,11 @@ else
             {
                 <tr>
                     <td>@snippet.Name</td>
-                    <td>@snippet.Description</td>
+                    <td>
+                        <div style="max-height: 100px; overflow-y: auto; white-space: pre-wrap; word-break: break-word;">
+                            @snippet.Description
+                        </div>
+                    </td>
                     <td>
                         @if (snippet.IsUserDefined)
                         {
