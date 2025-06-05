@@ -198,8 +198,8 @@ else
 
             <h5>2. Basic Syntax</h5>
             <ul>
-                <li><strong>Outputting values:</strong> Use double curly braces: <code>{{ ClassName }}</code> or <code>{{ col.ColumnName }}</code>.</li>
-                <li><strong>Comments:</strong> <code>{{# This is a comment #}}</code> or <code>{{## ... multi-line ... ##}}</code> (Note: Scriban's default might be just <code>##</code> for single line, check docs if specific comment syntax is needed beyond HTML comments in template text). Scriban typically treats text outside <code>{{ ... }}` as literal text.</li>
+                <li><strong>Outputting values:</strong> Use double curly braces: <code>@("{{ ClassName }}")</code> or <code>@("{{ col.ColumnName }}")</code>.</li>
+                <li><strong>Comments:</strong> Use <code>@("{{# This is a comment #}}")</code> or <code>@("{{## ... multi-line ... ##}}")</code>. (Note: Scriban's default might be <code>@("##")</code> for single line. Check docs for details.) Text outside <code>@("{{ ... }}")</code> is literal.</li>
             </ul>
 
             <h5>3. Loops</h5>
