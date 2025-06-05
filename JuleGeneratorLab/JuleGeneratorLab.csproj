@@ -17,8 +17,4 @@
     </Content>
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="wwwroot\js\textUtils.js" />
-  </ItemGroup>
-
 </Project>
