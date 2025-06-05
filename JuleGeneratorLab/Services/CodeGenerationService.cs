@@ -11,7 +11,7 @@ namespace JuleGeneratorLab.Services
 {
     public class CodeGenerationService
     {
-        public string GenerateCode(string tableName, List<ColumnDetail> selectedColumns, CodeSnippet snippet)
+        public string GenerateCode(string tableName, List<ColumnDetail> selectedColumns, CodeSnippet snippet, string namespaceValue, string programNameValue)
         {
             if (string.IsNullOrEmpty(tableName) || (selectedColumns == null || !selectedColumns.Any()) || snippet == null || string.IsNullOrWhiteSpace(snippet.Template))
             {
@@ -31,6 +31,8 @@ namespace JuleGeneratorLab.Services
                 var scriptObject = new ScriptObject();
                 scriptObject.Add("TableName", tableName);
                 scriptObject.Add("ClassName", NormalizeClassName(tableName));
+                scriptObject.Add("NameSpace", namespaceValue ?? "");
+                scriptObject.Add("ProgramName", programNameValue ?? "");
 
                 var columnList = new List<object>();
                 foreach (var col in selectedColumns)

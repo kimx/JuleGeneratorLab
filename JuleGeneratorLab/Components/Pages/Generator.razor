@@ -1,6 +1,6 @@
 @page "/generator"
 @using JuleGeneratorLab.Services
-@using JuleGeneratorLab.Models
+@using JuleGeneratorLab.Models // Ensure this is present for Models.GeneratedCodeResult
 @inject DatabaseSchemaReader DbSchemaReader
 @inject CodeSnippetService SnippetService
 @inject CodeGenerationService CodeGenService
@@ -102,7 +102,7 @@
         <!-- Column 1: Database Schema Explorer -->
         <div class="col-md-5 border-end">
             <h4>Database Schema</h4>
-                    @if (tables.Any())
+            @if (tables.Any())
                     {
                         <div class="list-group" style="max-height: 300px; overflow-y: auto;">
                             @foreach (var table in tables)
@@ -156,49 +156,105 @@
 
         <!-- Column 2: Snippet Selection & Configuration -->
         <div class="col-md-7">
-            <h4>Snippet Configuration</h4>
-                    <div class="mb-3">
-                        <label for="snippetSelector" class="form-label">Select Code Snippet:</label>
-                        <select class="form-select" id="snippetSelector" @bind="selectedSnippetName">
-                            @if (availableSnippets.Any())
-                            {
-                                @foreach (var snippet in availableSnippets)
-                                {
-                                    <option value="@snippet.Name">@snippet.Name - @snippet.Description</option>
-                                }
-                            }
-                            else
-                            {
-                                <option value="">No snippets loaded</option>
-                            }
-                        </select>
-                    </div>
+            <h4>Generation Parameters</h4>
+            <div class="mb-3">
+                <label for="namespaceInput" class="form-label">Namespace:</label>
+                <input type="text" class="form-control" id="namespaceInput" @bind="currentNamespace" placeholder="Enter namespace (e.g., MyProject.Models)" />
+            </div>
+            <div class="mb-3">
+                <label for="programNameInput" class="form-label">Program Name:</label>
+                <input type="text" class="form-control" id="programNameInput" @bind="currentProgramName" placeholder="Enter program/generator name (e.g., MyAwesomeGenerator)" />
+            </div>
 
-                    @if (!string.IsNullOrEmpty(selectedSnippetName))
+            <h4 class="mt-3">Snippet Selection</h4>
+            <!-- Snippet Selection Mode -->
+            <h5>Snippet Selection Mode:</h5>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="snippetSelectionModeOptions" id="selectIndividualMode" value="individual" @onchange="@(() => HandleSnippetSelectionModeChange("individual"))" checked="@(snippetSelectionMode == "individual")">
+                <label class="form-check-label" for="selectIndividualMode">
+                    Select Individual Snippets
+                </label>
+            </div>
+            @if (isProjectLoaded && availableSnippetSetsForProject.Any())
+            {
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="snippetSelectionModeOptions" id="selectFromSetsMode" value="sets" @onchange="@(() => HandleSnippetSelectionModeChange("sets"))" checked="@(snippetSelectionMode == "sets")">
+                    <label class="form-check-label" for="selectFromSetsMode">
+                        Select Snippet Set(s) from Project
+                    </label>
+                </div>
+            }
+
+            <!-- UI for Snippet Set Selection -->
+            @if (snippetSelectionMode == "sets" && isProjectLoaded && availableSnippetSetsForProject.Any())
+            {
+                <h5 class="mt-3">Select Project Snippet Sets:</h5>
+                @foreach (var snippetSet in availableSnippetSetsForProject)
+                {
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="set_@snippetSet.Id"
+                               checked="@selectedSnippetSetIdsForGeneration.Contains(snippetSet.Id)"
+                               @onchange="() => ToggleSnippetSetSelectionForGeneration(snippetSet.Id)">
+                        <label class="form-check-label" for="set_@snippetSet.Id">@snippetSet.Name (@snippetSet.Description)</label>
+                    </div>
+                }
+            }
+
+            <!-- UI for Individual Snippet Selection -->
+            @if (snippetSelectionMode == "individual")
+            {
+                <h5 class="mt-3">Select Individual Snippets:</h5>
+                <div class="list-group mt-2" style="max-height: 300px; overflow-y: auto;">
+                    @if (availableSnippets.Any())
                     {
-                        var selectedSnippet = availableSnippets.FirstOrDefault(s => s.Name == selectedSnippetName);
-                        if (selectedSnippet != null)
+                        @foreach (var snippet in availableSnippets)
                         {
-                            <div class="mt-2">
-                                <h6>Snippet Preview (Template):</h6>
-                                <pre style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; border-radius: 4px;"><code>@selectedSnippet.Template</code></pre>
-                            </div>
+                            <label class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>
+                                    <input type="checkbox" class="form-check-input me-2"
+                                           id="snippet_@snippet.Name.Replace(" ", "")"
+                                           checked="@(individualSnippetSelectionState.ContainsKey(snippet.Name) ? individualSnippetSelectionState[snippet.Name] : false)"
+                                           @onchange="() => ToggleIndividualSnippetSelection(snippet.Name)" />
+                                    @snippet.Name
+                                </span>
+                                <small class="text-muted">@snippet.Description</small>
+                            </label>
                         }
                     }
-                    <button class="btn btn-primary mt-2" @onclick="HandleGenerateCode">Generate Code</button>
+                    else
+                    {
+                        <p class="list-group-item">No snippets available for selection.</p>
+                    }
+                </div>
+                @if (availableSnippets.Any())
+                {
+                    <button class="btn btn-sm btn-outline-secondary mt-2 me-1" @onclick="() => SelectAllIndividualSnippets(true)">Select All</button>
+                    <button class="btn btn-sm btn-outline-secondary mt-2" @onclick="() => SelectAllIndividualSnippets(false)">Deselect All</button>
+                }
+            }
+            <button class="btn btn-primary mt-3" @onclick="HandleGenerateCode">Generate Code</button>
         </div>
     </div>
 
-    <!-- Row 3: Generated Code -->
+    <!-- Row 3: Generated Code Output Status -->
     <div class="row p-2 my-2 border rounded">
         <div class="col-12">
-            <h4>Generated Code</h4>
-                    <textarea class="form-control" rows="10" readonly>@generatedCode</textarea>
-                    <button class="btn btn-info mt-2" @onclick="CopyToClipboard">Copy to Clipboard</button>
-                    <button class="btn btn-success mt-2" @onclick="DownloadGeneratedCode">Download as File</button>
+            <h4>Generation Status</h4>
+            @if (!string.IsNullOrWhiteSpace(generatedCode)) // Display status if not empty
+            {
+                <div class="alert alert-info">@generatedCode</div>
+            }
+            else
+            {
+                 <p><em>Code generation results will appear in a modal.</em></p>
+            }
         </div>
     </div>
 </div>
+
+<GeneratedCodeModal Results="multipleGeneratedCodeResults"
+                  IsVisible="isModalVisible"
+                  OnClose="CloseGeneratedCodeModal" />
 
 @code {
     private ConnectionDetails connectionDetails = new ConnectionDetails();
@@ -219,16 +275,35 @@
     private string? columnSelectionError;
 
     private List<CodeSnippet> availableSnippets = new List<CodeSnippet>();
-    private string? selectedSnippetName; // To store the name of the selected snippet
+    //private string? selectedSnippetName; // Replaced by individualSnippetSelectionState and selectedSnippetSetIdsForGeneration
+
+    // New properties for namespace and program name
+    private string? currentNamespace = "";
+    private string? currentProgramName = "";
+
+    // New properties for snippet set selection
+    private List<SnippetSet> availableSnippetSetsForProject = new List<SnippetSet>();
+    private HashSet<Guid> selectedSnippetSetIdsForGeneration = new HashSet<Guid>();
+    private Dictionary<string, bool> individualSnippetSelectionState = new Dictionary<string, bool>();
+    private string snippetSelectionMode = "individual"; // "individual" or "sets"
+
+    // Removed inner class GeneratedCodeResult as it's moved to Models/GeneratedCodeResult.cs
+    private List<Models.GeneratedCodeResult> multipleGeneratedCodeResults = new List<Models.GeneratedCodeResult>();
+    private bool isModalVisible = false; // For controlling the modal visibility
+
 
     protected override async Task OnInitializedAsync() // Changed from OnInitialized
     {
         await SnippetService.EnsureInitializedAsync(); // New line
-        availableSnippets = SnippetService.Snippets;
-        if (availableSnippets.Any())
+        availableSnippets = SnippetService.Snippets.ToList();
+        // Initialize individual snippet selection state
+        individualSnippetSelectionState.Clear();
+        foreach (var snippet in availableSnippets)
         {
-            selectedSnippetName = availableSnippets.First().Name; // Default to first snippet
+            individualSnippetSelectionState[snippet.Name] = false; // Default to not selected
         }
+        currentNamespace = ""; // Initialize
+        currentProgramName = ""; // Initialize
 
         try
         {
@@ -255,16 +330,30 @@
         columnsForSelectedTable.Clear();
         selectedColumns.Clear();
 
+        // Reset new fields
+        availableSnippetSetsForProject.Clear();
+        selectedSnippetSetIdsForGeneration.Clear();
+        // individualSnippetSelectionState is managed below
+        // currentNamespace is managed below
+        // currentProgramName is managed below
+
+
         if (selectedProjectId == null || selectedProjectId == Guid.Empty)
         {
             projectLoadStatus = "Switched to manual mode. All snippets available.";
             currentLoadedProject = null;
             isProjectLoaded = false;
             availableSnippets = SnippetService.Snippets; // Show all snippets
-            if (availableSnippets.Any() && (string.IsNullOrEmpty(selectedSnippetName) || !availableSnippets.Any(s => s.Name == selectedSnippetName)))
+
+            individualSnippetSelectionState.Clear(); // Clear and repopulate for all snippets
+            foreach (var snippet in availableSnippets)
             {
-                selectedSnippetName = availableSnippets.First().Name;
+                individualSnippetSelectionState[snippet.Name] = false;
             }
+            snippetSelectionMode = "individual"; // Default to individual mode
+            currentNamespace = "";
+            currentProgramName = "";
+
             // Clear the DB schema view but leave manual connectionDetails fields as they are
             tables.Clear();
             currentSelectedTable = null;
@@ -282,11 +371,21 @@
             if (currentLoadedProject == null)
             {
                 projectLoadStatus = "Failed to load selected project details.";
+                currentNamespace = ""; // Reset on failure
+                currentProgramName = ""; // Reset on failure
+                snippetSelectionMode = "individual";
+                availableSnippets = SnippetService.Snippets; // Show all snippets
+                individualSnippetSelectionState.Clear();
+                foreach (var snippet in availableSnippets) { individualSnippetSelectionState[snippet.Name] = false; }
+                availableSnippetSetsForProject.Clear(); // Clear sets
+                selectedSnippetSetIdsForGeneration.Clear(); // Clear selected sets
                 return;
             }
 
             isProjectLoaded = true; // Set this early after project is confirmed loaded
             projectLoadStatus = $"Project '{currentLoadedProject.Name}' loaded."; // Initial status
+            currentNamespace = currentLoadedProject.Namespace ?? ""; // Pre-fill namespace
+            currentProgramName = ""; // Reset program name for new project load
 
             if (currentLoadedProject.DatabaseConnectionId.HasValue && currentLoadedProject.DatabaseConnectionId.Value != Guid.Empty)
             {
@@ -321,58 +420,62 @@
                 isConnectionSuccess = false;
             }
 
-            // Snippet Filtering Logic for Multiple Sets:
+            // Snippet Filtering Logic AND Set UI Population
+            availableSnippetSetsForProject.Clear();
+            selectedSnippetSetIdsForGeneration.Clear(); // Clear previous project's set selections
+
+            var allGlobalSnippets = SnippetService.Snippets.ToList(); // Master list of all snippets
+
             if (currentLoadedProject.SelectedSnippetSetIds != null && currentLoadedProject.SelectedSnippetSetIds.Any())
             {
-                var combinedSnippetNames = new HashSet<string>();
-                List<string> foundSetNames = new List<string>();
+                List<SnippetSet> setsForProjectUI = new List<SnippetSet>();
+                HashSet<string> snippetNamesFromProjectSets = new HashSet<string>();
+                List<string> foundSetNamesForStatus = new List<string>();
 
                 foreach (var setId in currentLoadedProject.SelectedSnippetSetIds)
                 {
-                    var snippetSet = await SnippetSetSvc.GetSnippetSetByIdAsync(setId);
-                    if (snippetSet != null)
+                    var snipSet = await SnippetSetSvc.GetSnippetSetByIdAsync(setId);
+                    if (snipSet != null)
                     {
-                        foundSetNames.Add(snippetSet.Name);
-                        foreach (var snippetName in snippetSet.SnippetNames)
+                        setsForProjectUI.Add(snipSet);
+                        foundSetNamesForStatus.Add(snipSet.Name);
+                        foreach (var nameInSet in snipSet.SnippetNames)
                         {
-                            combinedSnippetNames.Add(snippetName);
+                            snippetNamesFromProjectSets.Add(nameInSet);
                         }
                     }
                 }
+                availableSnippetSetsForProject = setsForProjectUI.OrderBy(s => s.Name).ToList();
 
-                if (combinedSnippetNames.Any())
+                if (availableSnippetSetsForProject.Any()) // If project has valid sets
                 {
-                    var allGlobalSnippets = SnippetService.Snippets;
-                    availableSnippets = allGlobalSnippets.Where(s => combinedSnippetNames.Contains(s.Name)).ToList();
-                    projectLoadStatus += $" Using snippet sets: '{string.Join(", ", foundSetNames)}' ({availableSnippets.Count} unique snippets).";
-                    if (!availableSnippets.Any())
-                    {
-                        projectLoadStatus += " The selected snippet set(s) are empty or contain no matching loaded snippets.";
+                    snippetSelectionMode = "sets"; // Default to set selection
+                    // Filter `availableSnippets` for the "Individual" tab to only those in the project's sets
+                    availableSnippets = allGlobalSnippets.Where(s => snippetNamesFromProjectSets.Contains(s.Name)).ToList();
+                    if (!availableSnippets.Any() && snippetNamesFromProjectSets.Any()) {
+                         projectLoadStatus += $" Project sets '{string.Join(", ", foundSetNamesForStatus)}' refer to snippets not currently loaded. ";
                     }
+                    projectLoadStatus += $" Project has snippet sets: '{string.Join(", ", foundSetNamesForStatus)}'. Defaulting to set selection. Individual tab will show {availableSnippets.Count} project-specific snippets.";
                 }
-                else
+                else // Sets were defined in project but none were found/loaded, or they were empty
                 {
-                    projectLoadStatus += " Selected snippet set(s) not found or are empty. Showing all snippets.";
-                    availableSnippets = SnippetService.Snippets; // Show all
+                    snippetSelectionMode = "individual";
+                    availableSnippets = allGlobalSnippets; // Show all global snippets
+                    projectLoadStatus += " Project's configured snippet sets were not found or are empty. Defaulting to individual selection of all global snippets.";
                 }
             }
-            else
+            else // No sets defined for this project
             {
-                projectLoadStatus += " No specific snippet set selected. Showing all snippets.";
-                availableSnippets = SnippetService.Snippets; // Show all
+                snippetSelectionMode = "individual";
+                availableSnippets = allGlobalSnippets; // Show all global snippets
+                projectLoadStatus += " No snippet sets configured for this project. Defaulting to individual selection of all global snippets.";
             }
 
-            // Reset selected snippet if it's no longer in the (potentially filtered) list (this part is mostly the same)
-            if (availableSnippets.Any())
+            // Initialize/reset individualSnippetSelectionState based on the (potentially project-filtered) availableSnippets
+            individualSnippetSelectionState.Clear();
+            foreach (var snippet in availableSnippets)
             {
-                if (string.IsNullOrEmpty(selectedSnippetName) || !availableSnippets.Any(s => s.Name == selectedSnippetName))
-                {
-                    selectedSnippetName = availableSnippets.First().Name;
-                }
-            }
-            else
-            {
-                selectedSnippetName = null;
+                individualSnippetSelectionState[snippet.Name] = false;
             }
         }
         catch (Exception ex)
@@ -380,10 +483,17 @@
             projectLoadStatus = $"Error loading project: {ex.Message}";
             isProjectLoaded = false; // Ensure this is false on error
             availableSnippets = SnippetService.Snippets; // Revert to all snippets on error
-             if (availableSnippets.Any() && (string.IsNullOrEmpty(selectedSnippetName) || !availableSnippets.Any(s => s.Name == selectedSnippetName)))
+
+            individualSnippetSelectionState.Clear();
+            foreach (var snippet in availableSnippets)
             {
-                selectedSnippetName = availableSnippets.First().Name;
+                individualSnippetSelectionState[snippet.Name] = false;
             }
+            currentNamespace = "";
+            currentProgramName = "";
+            snippetSelectionMode = "individual";
+            availableSnippetSetsForProject.Clear();
+            selectedSnippetSetIdsForGeneration.Clear();
         }
         StateHasChanged();
     }
@@ -551,78 +661,213 @@
 
     private async Task HandleGenerateCode()
     {
-        if (string.IsNullOrEmpty(currentSelectedTable) ||
-            !selectedColumns.Values.Any(isSelected => isSelected) || // Check if any column is actually selected
-            string.IsNullOrEmpty(selectedSnippetName))
+        multipleGeneratedCodeResults.Clear(); // Clear previous results
+
+        if (string.IsNullOrEmpty(currentSelectedTable) || !selectedColumns.Values.Any(isSelected => isSelected))
         {
-            generatedCode = "// Please select a table, at least one column, and a snippet first.";
+            generatedCode = "// Please select a table and at least one column."; // Update status message
+            StateHasChanged();
             return;
         }
 
-        var snippetToUse = availableSnippets.FirstOrDefault(s => s.Name == selectedSnippetName);
-        if (snippetToUse == null)
-        {
-            generatedCode = "// Selected snippet not found.";
-            return;
-        }
-
-        // Get only the details of columns that are marked as true in selectedColumns
         var columnsToGenerate = columnsForSelectedTable
                                   .Where(col => selectedColumns.ContainsKey(col.ColumnName) && selectedColumns[col.ColumnName])
                                   .ToList();
-
         if (!columnsToGenerate.Any())
         {
-             generatedCode = "// No columns are selected for code generation.";
+            generatedCode = "// No columns are selected for code generation."; // Update status message
+            StateHasChanged();
             return;
         }
 
-        generatedCode = CodeGenService.GenerateCode(currentSelectedTable, columnsToGenerate, snippetToUse);
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task CopyToClipboard()
-    {
-        if (!string.IsNullOrEmpty(generatedCode))
+        List<CodeSnippet> snippetsToGenerate = new List<CodeSnippet>();
+        if (snippetSelectionMode == "individual")
         {
-            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", generatedCode);
-            // Optionally, show a temporary message like "Copied!"
+            var selectedNames = individualSnippetSelectionState
+                                .Where(kvp => kvp.Value)
+                                .Select(kvp => kvp.Key)
+                                .ToList();
+            if (!selectedNames.Any())
+            {
+                generatedCode = "// No individual snippets selected."; // Update status message
+                StateHasChanged();
+                return;
+            }
+            // 'availableSnippets' is already correctly filtered (or not) by LoadSelectedProject
+            snippetsToGenerate = availableSnippets.Where(s => selectedNames.Contains(s.Name)).ToList();
         }
-    }
-
-    private async Task DownloadGeneratedCode()
-    {
-        if (string.IsNullOrEmpty(generatedCode) || generatedCode.StartsWith("//")) // Avoid downloading placeholder/error messages
+        else // snippetSelectionMode == "sets"
         {
-            // Optionally, inform the user that there's nothing valid to download
-            // For example, by setting a temporary status message
+            if (!selectedSnippetSetIdsForGeneration.Any())
+            {
+                generatedCode = "// No snippet sets selected from the project."; // Update status message
+                StateHasChanged();
+                return;
+            }
+
+            var allGlobalSnippets = SnippetService.Snippets.ToList(); // Use the master list of all snippets
+            HashSet<string> uniqueSnippetNamesFromSets = new HashSet<string>();
+
+            foreach(var setId in selectedSnippetSetIdsForGeneration)
+            {
+                var setInfo = availableSnippetSetsForProject.FirstOrDefault(s => s.Id == setId); // These are already loaded
+                if (setInfo != null)
+                {
+                    foreach(var nameInSet in setInfo.SnippetNames)
+                    {
+                        uniqueSnippetNamesFromSets.Add(nameInSet);
+                    }
+                }
+            }
+
+            if (!uniqueSnippetNamesFromSets.Any()) {
+                generatedCode = "// Selected project snippet set(s) are empty or contain no valid snippet names."; // Update status message
+                StateHasChanged();
+                return;
+            }
+            snippetsToGenerate = allGlobalSnippets.Where(s => uniqueSnippetNamesFromSets.Contains(s.Name)).ToList();
+        }
+
+        if (!snippetsToGenerate.Any())
+        {
+            generatedCode = "// No snippets identified for generation based on current selection criteria."; // Update status message
+            StateHasChanged();
             return;
         }
 
-        var snippetToUse = availableSnippets.FirstOrDefault(s => s.Name == selectedSnippetName);
-        string fileName = "GeneratedCode.txt"; // Default filename
-
-        if (snippetToUse != null)
+        foreach (var snippet in snippetsToGenerate)
         {
-            string baseName = string.IsNullOrEmpty(currentSelectedTable) ? "MyCode" : CodeGenService.NormalizeClassName(currentSelectedTable);
-            if (snippetToUse.Name.Contains("C# Model"))
+            string generatedOutput = CodeGenService.GenerateCode(
+                currentSelectedTable,
+                columnsToGenerate,
+                snippet,
+                currentNamespace ?? "",
+                currentProgramName ?? ""
+            );
+
+            multipleGeneratedCodeResults.Add(new GeneratedCodeResult
             {
-                fileName = $"{baseName}.cs";
-            }
-            else if (snippetToUse.Name.Contains("Blazor") || snippetToUse.Name.Contains("Razor"))
-            {
-                fileName = $"{baseName}Component.razor"; // Or derive more specifically
-            }
-            // Add more specific filename logic based on snippet type if desired
+                SnippetName = snippet.Name,
+                GeneratedContent = generatedOutput,
+                SuggestedFileName = GenerateFileName(snippet, currentSelectedTable, currentProgramName, currentNamespace)
+            });
         }
 
-        // Convert string to byte array
-        byte[] fileBytes = System.Text.Encoding.UTF8.GetBytes(generatedCode);
+        if (multipleGeneratedCodeResults.Any())
+        {
+            generatedCode = $"// {multipleGeneratedCodeResults.Count} code snippet(s) generated. Displaying in modal.";
+            isModalVisible = true; // Show the modal
+        }
+        else
+        {
+            generatedCode = "// No code generated or no snippets selected.";
+            isModalVisible = false;
+        }
+        await InvokeAsync(StateHasChanged); // Ensure UI updates
+    }
 
-        // Invoke JavaScript to trigger download
-        // Create a helper JS function if this becomes complex or repeated
-        // For a single use like this, direct invocation is fine.
-        var base64 = Convert.ToBase64String(fileBytes);
-        await JSRuntime.InvokeVoidAsync("saveAsFile", fileName, $"data:application/octet-stream;base64,{base64}");
+    private string GenerateFileName(CodeSnippet snippet, string? tableName, string? programName, string? namespaceVal)
+    {
+        string baseName = string.IsNullOrWhiteSpace(tableName) ? "Output" : CodeGenService.NormalizeClassName(tableName);
+        string snippetNamePart = snippet.Name.Replace(" ", "").Replace("(", "").Replace(")", "").Replace("/", "-");
+
+        string extension = ".txt"; // Default extension
+
+        if (snippet.Name.Contains("C# Model", StringComparison.OrdinalIgnoreCase) || (snippet.Template.Contains("class ") && snippet.Template.Contains("namespace ")))
+        {
+            extension = ".cs";
+        }
+        else if (snippet.Name.Contains("Razor", StringComparison.OrdinalIgnoreCase) || snippet.Name.Contains("Blazor", StringComparison.OrdinalIgnoreCase))
+        {
+            extension = ".razor";
+        }
+        else if (snippet.Name.Contains("XML", StringComparison.OrdinalIgnoreCase))
+        {
+            extension = ".xml";
+        }
+        else if (snippet.Name.Contains("JSON", StringComparison.OrdinalIgnoreCase))
+        {
+            extension = ".json";
+        }
+        // Add more rules as needed
+
+        return $"{baseName}_{snippetNamePart}{extension}";
+    }
+
+    // New methods for snippet selection
+    private void HandleSnippetSelectionModeChange(string mode)
+    {
+        snippetSelectionMode = mode;
+        if (mode == "individual")
+        {
+            selectedSnippetSetIdsForGeneration.Clear(); // Clear set selections if switching to individual
+        }
+        // Optionally, clear individual selections when switching to sets, or leave them.
+        // else // mode == "sets"
+        // {
+        //     var keys = individualSnippetSelectionState.Keys.ToList();
+        //     foreach (var key in keys)
+        //     {
+        //         individualSnippetSelectionState[key] = false;
+        //     }
+        // }
+        StateHasChanged();
+    }
+
+    private void ToggleSnippetSetSelectionForGeneration(Guid setId)
+    {
+        if (selectedSnippetSetIdsForGeneration.Contains(setId))
+        {
+            selectedSnippetSetIdsForGeneration.Remove(setId);
+        }
+        else
+        {
+            selectedSnippetSetIdsForGeneration.Add(setId);
+        }
+        StateHasChanged();
+    }
+
+    private void ToggleIndividualSnippetSelection(string snippetName)
+    {
+        if (individualSnippetSelectionState.ContainsKey(snippetName))
+        {
+            individualSnippetSelectionState[snippetName] = !individualSnippetSelectionState[snippetName];
+        }
+        else
+        {
+            individualSnippetSelectionState[snippetName] = true;
+        }
+        StateHasChanged();
+    }
+
+    private void SelectAllIndividualSnippets(bool select)
+    {
+        // Use 'availableSnippets' as it's the source for the individual selection UI
+        var snippetNames = availableSnippets.Select(s => s.Name).ToList();
+        foreach (var name in snippetNames)
+        {
+            individualSnippetSelectionState[name] = select;
+        }
+        StateHasChanged();
+    }
+
+
+    // private async Task CopyToClipboard() // This was for the old textarea, modal has its own
+    // {
+    //     if (!string.IsNullOrEmpty(generatedCode))
+    //     {
+    //         await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", generatedCode);
+    //     }
+    // }
+
+    // private async Task DownloadGeneratedCode() // This was for the old textarea, modal has its own
+    // {
+    //     // ... logic from before, now superseded by modal's download/zip functionality ...
+    // }
+
+    private void CloseGeneratedCodeModal()
+    {
+        isModalVisible = false;
+        StateHasChanged();
     }
 }
