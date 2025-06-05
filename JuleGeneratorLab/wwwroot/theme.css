@@ -40,7 +40,7 @@
     --navbar-bg: var(--purple-primary);
     --navbar-link-color: var(--purple-text-on-dark);
     --navbar-link-hover-color: var(--purple-artistic-accent); /* Gold hover for links */
-    --navbar-brand-color: var(--purple-artistic-accent); /* Gold for brand */
+    --navbar-brand-color: var(--purple-white); /* White for brand */
     --navbar-border-color: #2A004D; /* Even darker shade of primary for border */
 
     /* Buttons - Artistic Deep Purple */
@@ -51,6 +51,10 @@
     --button-secondary-bg: var(--purple-secondary);
     --button-secondary-hover-bg: #6B006B;
     --button-secondary-text: var(--purple-text-on-dark);
+
+    --button-info-bg: #D1C4E9; /* Light Lavender/Pale Purple */
+    --button-info-hover-bg: #B39DDB; /* Slightly darker/more saturated Lavender */
+    --button-info-text: var(--purple-text-on-light); /* Dark text for contrast on light purple */
 }
 
 /* Foundational style updates */
@@ -161,6 +165,17 @@ main > .top-row a.active {
     background-color: var(--button-secondary-hover-bg) !important;
     border-color: var(--button-secondary-hover-bg) !important;
     color: var(--button-secondary-text) !important;
+}
+
+.btn-info {
+    background-color: var(--button-info-bg) !important;
+    border-color: var(--button-info-bg) !important;
+    color: var(--button-info-text) !important;
+}
+.btn-info:hover {
+    background-color: var(--button-info-hover-bg) !important;
+    border-color: var(--button-info-hover-bg) !important;
+    color: var(--button-info-text) !important;
 }
 
 /* Navbar Toggler icon for deep purple background */
