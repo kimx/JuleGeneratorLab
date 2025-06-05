@@ -1,14 +1,36 @@
 @page "/snippetmanager"
 @using JuleGeneratorLab.Models
 @using JuleGeneratorLab.Services
+@using System.Text
 @inject CodeSnippetService SnippetService
-@inject IJSRuntime JSRuntime // Will be needed for LocalStorage interaction via service
+@inject IJSRuntime JSRuntime
 
 <h3>Code Snippet Manager</h3>
 
-<div class="my-3">
-    <button class="btn btn-primary" @onclick="ShowCreateForm">Create New Snippet</button>
+<div class="row my-3 align-items-center">
+    <div class="col-md-auto">
+        <button class="btn btn-primary" @onclick="ShowCreateForm">Create New Snippet</button>
+    </div>
+    <div class="col-md-auto ms-md-auto">
+        <div class="btn-group" role="group" aria-label="Import/Export actions">
+            <button class="btn btn-outline-secondary" @onclick="DownloadUserSnippetsAsync">
+                <i class="bi bi-download"></i> Download User Snippets
+            </button>
+            <label class="btn btn-outline-secondary mb-0">
+                <i class="bi bi-upload"></i> Upload User Snippets
+                <InputFile OnChange="HandleFileUploadAsync" accept=".json" class="d-none" />
+            </label>
+        </div>
+    </div>
 </div>
+
+@if (!string.IsNullOrEmpty(feedbackMessage))
+{
+    <div class="alert alert-@feedbackMessageType alert-dismissible fade show" role="alert">
+        @feedbackMessage
+        <button type="button" class="btn-close" @onclick="ClearFeedbackMessage"></button>
+    </div>
+}
 
 @if (snippets == null)
 {
@@ -85,7 +107,7 @@ else
 @if (showEditOrCreateForm && currentEditSnippet != null)
 {
     <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.4);">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl"> <!-- Changed to modal-xl -->
             <div class="modal-content">
                 <EditForm Model="currentEditSnippet" OnValidSubmit="HandleSaveSnippet">
                     <DataAnnotationsValidator />
@@ -94,20 +116,54 @@ else
                         <button type="button" class="btn-close" @onclick="CloseEditOrCreateForm"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="snippetName" class="form-label">Name:</label>
-                            <InputText id="snippetName" class="form-control" @bind-Value="currentEditSnippet.Name" />
-                            <ValidationMessage For="@(() => currentEditSnippet.Name)" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="snippetDescription" class="form-label">Description:</label>
-                            <InputTextArea id="snippetDescription" class="form-control" @bind-Value="currentEditSnippet.Description" rows="2" />
-                            <ValidationMessage For="@(() => currentEditSnippet.Description)" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="snippetTemplate" class="form-label">Template:</label>
-                            <InputTextArea id="snippetTemplate" class="form-control" @bind-Value="currentEditSnippet.Template" rows="15" style="font-family: monospace; white-space: pre;" />
-                            <ValidationMessage For="@(() => currentEditSnippet.Template)" />
+                        <div class="row">
+                            <div class="col-md-8"> {/* Form fields column */}
+                                <div class="mb-3">
+                                    <label for="snippetName" class="form-label">Name:</label>
+                                    <InputText id="snippetName" class="form-control" @bind-Value="currentEditSnippet.Name" />
+                                    <ValidationMessage For="@(() => currentEditSnippet.Name)" />
+                                </div>
+                                <div class="mb-3">
+                                    <label for="snippetDescription" class="form-label">Description:</label>
+                                    <InputTextArea id="snippetDescription" class="form-control" @bind-Value="currentEditSnippet.Description" rows="2" />
+                                    <ValidationMessage For="@(() => currentEditSnippet.Description)" />
+                                </div>
+                                <div class="mb-3">
+                                    <label for="snippetTemplate" class="form-label">Template:</label>
+                                    <InputTextArea id="snippetTemplateArea" class="form-control" @bind-Value="currentEditSnippet.Template" rows="20" style="font-family: monospace; white-space: pre;" />
+                                    <ValidationMessage For="@(() => currentEditSnippet.Template)" />
+                                </div>
+                            </div>
+                            <div class="col-md-4"> {/* Help panel column */}
+                                <div class="p-3 bg-light border rounded" style="font-size: 0.875rem; max-height: calc(100vh - 250px); overflow-y: auto;">
+                                    <h6>Quick Reference & Insert</h6>
+                                    <hr class="my-2">
+
+                                    <p class="mb-1"><strong>Global Variables:</strong></p>
+                                    <div class="mb-2 btn-group-vertical w-100" role="group">
+                                        <button type="button" class="btn btn-sm btn-outline-primary text-start" @onclick='() => InsertTextIntoTemplateAsync("{{ TableName }}")'><code>{{ TableName }}</code></button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary text-start" @onclick='() => InsertTextIntoTemplateAsync("{{ ClassName }}")'><code>{{ ClassName }}</code></button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary text-start" @onclick='() => InsertTextIntoTemplateAsync("{{ for col in SelectedColumns }}\n  {{ col.ColumnName }}\n{{ end }}")'>Loop <code>{{ SelectedColumns }}</code></button>
+                                    </div>
+
+                                    <p class="mb-1"><strong>Column Properties</strong> (inside loop):</p>
+                                    <div class="mb-2 btn-group-vertical w-100" role="group">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary text-start" @onclick='() => InsertTextIntoTemplateAsync("{{ col.ColumnName }}")'><code>{{ col.ColumnName }}</code></button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary text-start" @onclick='() => InsertTextIntoTemplateAsync("{{ col.DataType }}")'><code>{{ col.DataType }}</code></button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary text-start" @onclick='() => InsertTextIntoTemplateAsync("{{ col.IsPrimaryKey }}")'><code>{{ col.IsPrimaryKey }}</code></button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary text-start" @onclick='() => InsertTextIntoTemplateAsync("{{ col.IsNullable }}")'><code>{{ col.IsNullable }}</code></button>
+                                    </div>
+
+                                    <p class="mb-1"><strong>Custom Functions:</strong></p>
+                                    <div class="mb-2 btn-group-vertical w-100" role="group">
+                                        <button type="button" class="btn btn-sm btn-outline-success text-start" @onclick='() => InsertTextIntoTemplateAsync("{{ normalize_property_name col.ColumnName }}")'><code>normalize_property_name</code></button>
+                                        <button type="button" class="btn btn-sm btn-outline-success text-start" @onclick='() => InsertTextIntoTemplateAsync("{{ map_db_type_to_csharp col.DataType }}")'><code>map_db_type_to_csharp</code></button>
+                                    </div>
+
+                                    <hr class="my-2">
+                                    <p class="small">Click buttons to insert placeholders. For full details, see <a href="https://github.com/scriban/scriban/blob/master/doc/language.md" target="_blank">Scriban docs</a> and the "Template Authoring Help" section below.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -142,8 +198,8 @@ else
 
             <h5>2. Basic Syntax</h5>
             <ul>
-                <li><strong>Outputting values:</strong> Use double curly braces: <code>{{ ClassName }}</code> or <code>{{ col.ColumnName }}</code>.</li>
-                <li><strong>Comments:</strong> <code>{{# This is a comment #}}</code> or <code>{{## ... multi-line ... ##}}</code> (Note: Scriban's default might be just <code>##</code> for single line, check docs if specific comment syntax is needed beyond HTML comments in template text). Scriban typically treats text outside <code>{{ ... }}` as literal text.</li>
+                <li><strong>Outputting values:</strong> Use double curly braces: <code>@("{{ ClassName }}")</code> or <code>@("{{ col.ColumnName }}")</code>.</li>
+                <li><strong>Comments:</strong> Use <code>@("{{# This is a comment #}}")</code> or <code>@("{{## ... multi-line ... ##}}")</code>. (Note: Scriban's default might be <code>@("##")</code> for single line. Check docs for details.) Text outside <code>@("{{ ... }}")</code> is literal.</li>
             </ul>
 
             <h5>3. Loops</h5>
@@ -195,6 +251,9 @@ else
     private CodeSnippet? currentEditSnippet; // For edit form
     private bool showEditOrCreateForm = false;
     private string? originalSnippetNameForEdit; // To keep track of the name before editing
+
+    private string? feedbackMessage;
+    private string feedbackMessageType = "info"; // e.g., "success", "danger", "warning"
 
     protected override async Task OnInitializedAsync()
     {
@@ -290,5 +349,112 @@ else
     private void CloseViewModal()
     {
         viewingSnippet = null;
+    }
+
+    private void ClearFeedbackMessage()
+    {
+        feedbackMessage = null;
+    }
+
+    private async Task DownloadUserSnippetsAsync()
+    {
+        ClearFeedbackMessage();
+        try
+        {
+            string jsonString = await SnippetService.GetUserSnippetsAsJsonAsync();
+            if (string.IsNullOrWhiteSpace(jsonString) || jsonString == "[]")
+            {
+                feedbackMessage = "No user-defined snippets to download.";
+                feedbackMessageType = "warning";
+                return;
+            }
+
+            var fileName = "user_snippets.json";
+            var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonString));
+
+            // Using the existing saveAsFile JS function, ensure it's globally available or in a shared JS file.
+            // For JSON, the mime type should be application/json.
+            await JSRuntime.InvokeVoidAsync("saveAsFile", fileName, $"data:application/json;base64,{base64}");
+
+            feedbackMessage = "User snippets download initiated.";
+            feedbackMessageType = "success";
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error downloading user snippets: {ex.Message}");
+            feedbackMessage = $"Error downloading snippets: {ex.Message}";
+            feedbackMessageType = "danger";
+        }
+        StateHasChanged();
+    }
+
+    private async Task HandleFileUploadAsync(InputFileChangeEventArgs e)
+    {
+        ClearFeedbackMessage();
+        var file = e.File;
+        if (file == null)
+        {
+            feedbackMessage = "No file selected.";
+            feedbackMessageType = "warning";
+            StateHasChanged();
+            return;
+        }
+
+        // Basic validation for file type (extension)
+        if (!file.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            feedbackMessage = "Invalid file type. Please upload a .json file.";
+            feedbackMessageType = "danger";
+            StateHasChanged();
+            return;
+        }
+
+        // Max file size (e.g., 5MB) - adjust as needed
+        long maxFileSize = 5 * 1024 * 1024;
+        if (file.Size > maxFileSize)
+        {
+            feedbackMessage = $"File size exceeds the limit of {maxFileSize / (1024*1024)}MB.";
+            feedbackMessageType = "danger";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            // Read the file content
+            // Requesting a stream and reading from it is more memory efficient for larger files.
+            await using var stream = file.OpenReadStream(maxFileSize);
+            using var reader = new StreamReader(stream);
+            string jsonContent = await reader.ReadToEndAsync();
+
+            bool success = await SnippetService.LoadUserSnippetsFromJsonAsync(jsonContent);
+
+            if (success)
+            {
+                await LoadSnippetsAsync(); // Refresh the snippet list in the UI
+                feedbackMessage = "User snippets uploaded and loaded successfully.";
+                feedbackMessageType = "success";
+            }
+            else
+            {
+                feedbackMessage = "Failed to load snippets from the file. It might be corrupted or not in the correct format.";
+                feedbackMessageType = "danger";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error uploading user snippets: {ex.Message}");
+            feedbackMessage = $"Error uploading snippets: {ex.Message}";
+            feedbackMessageType = "danger";
+        }
+        StateHasChanged();
+    }
+
+    private async Task InsertTextIntoTemplateAsync(string textToInsert)
+    {
+        if (currentEditSnippet != null) // Ensure we are editing
+        {
+            await JSRuntime.InvokeVoidAsync("textUtils.insertTextAtCursor", "snippetTemplateArea", textToInsert);
+        }
     }
 }
