@@ -20,6 +20,7 @@ builder.Services.AddScoped<CodeGenerationService>();
 
             builder.Services.AddScoped<ProjectService>();
             builder.Services.AddScoped<DatabaseConnectionService>();
+            builder.Services.AddScoped<SnippetSetService>();
 
             var app = builder.Build();
 

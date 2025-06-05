@@ -116,9 +116,18 @@ else
                             <ValidationMessage For="@(() => currentProject.DatabaseConnectionId)" />
                         </div>
                         <div class="mb-3">
-                            <label for="projectSnippetSet" class="form-label">Code Snippet Set ID</label>
-                            <InputText id="projectSnippetSet" class="form-control" @bind-Value="currentProjectSnippetSetIdString" placeholder="Enter Snippet Set ID (optional GUID)" />
-                            @* <ValidationMessage For="@(() => currentProject.SelectedSnippetSetId)" /> *@
+                            <label for="projectSnippetSet" class="form-label">Code Snippet Set</label> @* Changed label back *@
+                            <InputSelect id="projectSnippetSet" class="form-select" @bind-Value="currentProject.SelectedSnippetSetId">
+                                <option value="">-- Select Snippet Set (Optional) --</option>
+                                @if (availableSnippetSets != null)
+                                {
+                                    @foreach (var sSet in availableSnippetSets)
+                                    {
+                                        <option value="@sSet.Id">@sSet.Name</option>
+                                    }
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => currentProject.SelectedSnippetSetId)" /> @* Re-enabled *@
                         </div>
                          @if (!string.IsNullOrWhiteSpace(errorMessage))
                         {

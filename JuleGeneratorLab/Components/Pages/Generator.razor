@@ -7,6 +7,7 @@
 @inject IJSRuntime JSRuntime
 @inject ProjectService ProjectSvc
 @inject DatabaseConnectionService DbConnectionSvc
+@inject SnippetSetService SnippetSetSvc
 
 <h3>Code Generator</h3>
 
@@ -254,10 +255,24 @@
         columnsForSelectedTable.Clear();
         selectedColumns.Clear();
 
-
         if (selectedProjectId == null || selectedProjectId == Guid.Empty)
         {
-            projectLoadStatus = "Please select a project to load.";
+            projectLoadStatus = "Switched to manual mode. All snippets available.";
+            currentLoadedProject = null;
+            isProjectLoaded = false;
+            availableSnippets = SnippetService.Snippets; // Show all snippets
+            if (availableSnippets.Any() && (string.IsNullOrEmpty(selectedSnippetName) || !availableSnippets.Any(s => s.Name == selectedSnippetName)))
+            {
+                selectedSnippetName = availableSnippets.First().Name;
+            }
+            // Clear the DB schema view but leave manual connectionDetails fields as they are
+            tables.Clear();
+            currentSelectedTable = null;
+            columnsForSelectedTable.Clear();
+            selectedColumns.Clear();
+            connectionStatus = "Manual mode. Please connect to a database.";
+            isConnectionSuccess = false;
+            StateHasChanged();
             return;
         }
 
@@ -270,34 +285,91 @@
                 return;
             }
 
+            isProjectLoaded = true; // Set this early after project is confirmed loaded
+            projectLoadStatus = $"Project '{currentLoadedProject.Name}' loaded."; // Initial status
+
             if (currentLoadedProject.DatabaseConnectionId.HasValue && currentLoadedProject.DatabaseConnectionId.Value != Guid.Empty)
             {
                 var dbConn = await DbConnectionSvc.GetConnectionByIdAsync(currentLoadedProject.DatabaseConnectionId.Value);
                 if (dbConn != null)
                 {
-                    projectLoadStatus = $"Project '{currentLoadedProject.Name}' loaded. Database connection '{dbConn.Name}' will be used.";
-                    isProjectLoaded = true;
-
+                    projectLoadStatus += $" Database connection '{dbConn.Name}' will be used.";
                     // Automatically connect using the project's connection string
                     await ConnectToDatabase(dbConn.ConnectionString);
                 }
                 else
                 {
-                    projectLoadStatus = $"Project '{currentLoadedProject.Name}' loaded, but its associated database connection (ID: {currentLoadedProject.DatabaseConnectionId.Value}) could not be found. Please check DB Connections.";
-                    isProjectLoaded = true; // Project is loaded, but DB connection is missing
+                    projectLoadStatus += $" Its associated database connection (ID: {currentLoadedProject.DatabaseConnectionId.Value}) could not be found. Please check DB Connections.";
+                    // Clear DB specific views as connection is missing
+                    tables.Clear();
+                    currentSelectedTable = null;
+                    columnsForSelectedTable.Clear();
+                    selectedColumns.Clear();
+                    connectionStatus = "Project's DB connection not found. Connect manually or update project.";
+                    isConnectionSuccess = false;
                 }
             }
             else
             {
-                projectLoadStatus = $"Project '{currentLoadedProject.Name}' loaded, but it does not have a database connection configured.";
-                isProjectLoaded = true; // Project is loaded, but no DB connection to use
+                projectLoadStatus += " It does not have a database connection configured.";
+                // Clear DB specific views as no DB is configured for project
+                tables.Clear();
+                currentSelectedTable = null;
+                columnsForSelectedTable.Clear();
+                selectedColumns.Clear();
+                connectionStatus = "Project loaded has no DB connection. Connect manually or select another project.";
+                isConnectionSuccess = false;
             }
 
-            // Future: Load/filter snippets based on currentLoadedProject.SelectedSnippetSetId
+            // Snippet Filtering Logic:
+            if (currentLoadedProject.SelectedSnippetSetId.HasValue && currentLoadedProject.SelectedSnippetSetId.Value != Guid.Empty)
+            {
+                var snippetSet = await SnippetSetSvc.GetSnippetSetByIdAsync(currentLoadedProject.SelectedSnippetSetId.Value);
+                if (snippetSet != null && snippetSet.SnippetNames.Any())
+                {
+                    var allGlobalSnippets = SnippetService.Snippets;
+                    availableSnippets = allGlobalSnippets.Where(s => snippetSet.SnippetNames.Contains(s.Name)).ToList();
+                    projectLoadStatus += $" Using snippet set '{snippetSet.Name}' ({availableSnippets.Count} snippets).";
+
+                    if (!availableSnippets.Any())
+                    {
+                        projectLoadStatus += " The selected snippet set is empty or contains no matching loaded snippets.";
+                    }
+                }
+                else
+                {
+                    projectLoadStatus += " Selected snippet set not found or is empty. Showing all snippets.";
+                    availableSnippets = SnippetService.Snippets;
+                }
+            }
+            else
+            {
+                projectLoadStatus += " No specific snippet set selected. Showing all snippets.";
+                availableSnippets = SnippetService.Snippets;
+            }
+
+            // Reset selected snippet if it's no longer in the (potentially filtered) list
+            if (availableSnippets.Any())
+            {
+                if (string.IsNullOrEmpty(selectedSnippetName) || !availableSnippets.Any(s => s.Name == selectedSnippetName))
+                {
+                    selectedSnippetName = availableSnippets.First().Name;
+                }
+            }
+            else
+            {
+                selectedSnippetName = null;
+            }
         }
         catch (Exception ex)
         {
             projectLoadStatus = $"Error loading project: {ex.Message}";
+            isProjectLoaded = false; // Ensure this is false on error
+            availableSnippets = SnippetService.Snippets; // Revert to all snippets on error
+             if (availableSnippets.Any() && (string.IsNullOrEmpty(selectedSnippetName) || !availableSnippets.Any(s => s.Name == selectedSnippetName)))
+            {
+                selectedSnippetName = availableSnippets.First().Name;
+            }
         }
         StateHasChanged();
     }
