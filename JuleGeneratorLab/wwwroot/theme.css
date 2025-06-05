@@ -1,99 +1,91 @@
 :root {
-    /* Light Theme with Ocean Breeze Navbar/Sidebar */
-    --ocean-primary: #007bff; /* Retain for primary actions like buttons */
-    --ocean-primary-rgb: 0,123,255;
-    --ocean-secondary: #6c757d;
-    --ocean-secondary-rgb: 108,117,125;
+    /* Purple Theme */
+    --purple-primary: #6A0DAD; /* A rich, medium purple */
+    --purple-primary-rgb: 106,13,173;
+    --purple-secondary: #9370DB; /* Medium Slate Blue / Lighter Purple */
+    --purple-secondary-rgb: 147,112,219;
 
-    --ocean-light-bg: #f8f9fa;    /* Overall page background (very light gray) */
-    --ocean-white-bg: #ffffff;    /* Main content area (white) */
-    --ocean-dark-text: #212529;   /* Default dark text for light backgrounds */
-    --ocean-dark-text-rgb: 33,37,41;
-    --ocean-light-text-on-dark-bg: #f8f9fa; /* Light text for use on dark primary/secondary buttons */
+    --purple-dark-bg: #301934; /* Deep Indigo/Plum for dark backgrounds if needed */
+    --purple-light-bg: #E6E6FA;   /* Lavender - for light backgrounds */
+    --purple-content-bg: #FFFFFF; /* White for main content area for readability */
 
-    --ocean-accent: #17a2b8;   /* Teal - for general links if they are not on the blue nav/sidebar */
-    --ocean-accent-rgb: 23,162,184;
+    --purple-text-on-dark: #F3E5F5;  /* Light lavender/off-white for text on dark purple backgrounds */
+    --purple-text-on-light: #212529; /* Standard dark text for light/white backgrounds */
+    --purple-accent: #DDA0DD;     /* Plum / Light orchid - for accents */
+    --purple-accent-hover: #BA55D3; /* Medium Orchid - darker accent for hover */
+    --purple-white: #ffffff;
+    --purple-white-rgb: 255,255,255;
+    --purple-dark-text-rgb: 33,37,41; /* For consistency if needed */
 
-    /* NEW: Ocean Breeze Colors */
-    --ocean-breeze-navbar-bg: #A0D2DB; /* Light sky/ocean blue for Navbar */
-    --ocean-breeze-sidebar-start: #BEE3DB; /* Slightly lighter, greener-blue for Sidebar start */
-    --ocean-breeze-sidebar-end: #A0D2DB;   /* Matches navbar for Sidebar end, creating subtle gradient */
-    --ocean-breeze-text-color: #004052; /* Darker teal/blue for text on ocean breeze backgrounds */
-    --ocean-breeze-text-color-rgb: 0,64,82; /* RGB for --ocean-breeze-text-color */
-    --ocean-breeze-link-hover-bg: rgba(0,64,82,0.1); /* Subtle dark hover for links on ocean backgrounds */
-    --ocean-breeze-active-bg: rgba(0,64,82,0.15); /* Slightly more pronounced for active links */
+    /* Theme variable setup */
+    --main-content-bg: var(--purple-content-bg); /* White main content */
+    --ocean-body-bg: var(--purple-light-bg);    /* Light lavender overall page bg */
+    --ocean-body-color: var(--purple-text-on-light);
+    --ocean-heading-color: var(--purple-primary);
+    --ocean-link-color: var(--purple-secondary);
+    --ocean-link-hover-color: var(--purple-primary);
 
-    /* Main content and body setup */
-    --main-content-bg: var(--ocean-white-bg);
-    --ocean-body-bg: var(--ocean-light-bg);
-    --ocean-body-color: var(--ocean-dark-text);
-    --ocean-heading-color: var(--ocean-primary);
-    --ocean-link-color: var(--ocean-accent); /* General links in main content */
-    --ocean-link-hover-color: #117a8b;
+    /* Sidebar - Purple theme */
+    --sidebar-bg-start: var(--purple-primary); /* Primary purple */
+    --sidebar-bg-end: var(--purple-secondary);   /* Lighter purple for gradient */
+    --sidebar-link-color: var(--purple-text-on-dark);
+    --sidebar-link-hover-bg: rgba(255,255,255,0.1);
+    --sidebar-active-bg: rgba(255,255,255,0.2);
+    --sidebar-active-text-color: var(--purple-white);
 
-    /* Sidebar - Ocean Breeze */
-    --sidebar-bg-start: var(--ocean-breeze-sidebar-start);
-    --sidebar-bg-end: var(--ocean-breeze-sidebar-end);
-    --sidebar-link-color: var(--ocean-breeze-text-color);
-    --sidebar-link-hover-color: var(--ocean-breeze-text-color); /* Keep text color, change background */
-    --sidebar-active-bg: var(--ocean-breeze-active-bg);
-    --sidebar-active-text-color: var(--ocean-breeze-text-color);
+    /* Navbar / Main Top Row - Purple theme */
+    --navbar-bg: var(--purple-primary);
+    --navbar-link-color: var(--purple-text-on-dark);
+    --navbar-link-hover-color: var(--purple-white);
+    --navbar-brand-color: var(--purple-white);
+    --navbar-border-color: #4B0082; /* Indigo - darker shade of primary for border */
 
-    /* Navbar / Main Top Row - Ocean Breeze */
-    --navbar-bg: var(--ocean-breeze-navbar-bg);
-    --navbar-link-color: var(--ocean-breeze-text-color);
-    --navbar-link-hover-color: var(--ocean-breeze-text-color); /* Keep text color, change background */
-    --navbar-brand-color: var(--ocean-breeze-text-color);
-    --navbar-border-color: #85B8C1; /* Slightly darker shade of navbar bg for border */
+    /* Buttons - Purple theme */
+    --button-primary-bg: var(--purple-primary);
+    --button-primary-hover-bg: #800080; /* Purple (standard) - slightly different shade for hover */
+    --button-primary-text: var(--purple-white);
 
-    /* Buttons - Standard Bootstrap-like appearance (remain as is unless specified) */
-    --button-primary-bg: var(--ocean-primary);
-    --button-primary-hover-bg: #0069d9;
-    --button-primary-text: var(--ocean-white-bg);
-
-    --button-secondary-bg: var(--ocean-secondary);
-    --button-secondary-hover-bg: #5a6268;
-    --button-secondary-text: var(--ocean-white-bg);
-
-    --ocean-white-rgb: 255,255,255;
+    --button-secondary-bg: var(--purple-secondary);
+    --button-secondary-hover-bg: #8A2BE2; /* Blue Violet for hover */
+    --button-secondary-text: var(--purple-white);
 }
 
-/* Body, main content, headings, general links - should be mostly fine from previous light theme setup */
+/* Foundational style updates */
 body {
-    background-color: var(--ocean-body-bg) !important;
-    color: var(--ocean-body-color) !important;
+    background-color: var(--ocean-body-bg) !important; /* Light lavender page background */
+    color: var(--ocean-body-color) !important; /* Dark text */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
 }
 main {
-    background-color: var(--main-content-bg) !important;
+    background-color: var(--main-content-bg) !important; /* White main content background */
 }
 h1, h2, h3, h4, h5, h6 {
-    color: var(--ocean-heading-color);
+    color: var(--ocean-heading-color); /* Primary purple headings */
 }
+
 /* General links in main content area */
-main a, main .btn-link { /* More specific selector for main content links */
-    color: var(--ocean-link-color) !important;
+main a, main .btn-link {
+    color: var(--ocean-link-color) !important; /* Secondary purple links */
 }
 main a:hover, main .btn-link:hover {
-    color: var(--ocean-link-hover-color) !important;
+    color: var(--ocean-link-hover-color) !important; /* Primary purple on hover */
 }
 
-
-/* Update Navbar/Main Top Row specific styles for Ocean Breeze theme */
+/* Update Navbar/Main Top Row specific styles for Purple theme */
 .nav-menu .top-row,
 .sidebar .top-row,
 .navbar-dark.top-row,
 .navbar,
 main > .top-row {
-    background-color: var(--navbar-bg) !important; /* Ocean Breeze Navbar BG */
+    background-color: var(--navbar-bg) !important;
     border-bottom: 1px solid var(--navbar-border-color) !important;
 }
 
 .navbar .navbar-brand,
 .nav-menu .top-row .navbar-brand,
 .sidebar .top-row .navbar-brand,
-main > .top-row .navbar-brand { /* Assuming main top row also gets this branding */
-    color: var(--navbar-brand-color) !important; /* Ocean Breeze Text Color */
+main > .top-row .navbar-brand {
+    color: var(--navbar-brand-color) !important;
 }
 
 /* Links in Navbar / NavMenu's top row / Main content top row */
@@ -102,35 +94,35 @@ main > .top-row .navbar-brand { /* Assuming main top row also gets this branding
 .sidebar .top-row .nav-link, /* Links in the top part of the sidebar */
 main > .top-row a,
 main > .top-row .btn-link {
-    color: var(--navbar-link-color) !important; /* Ocean Breeze Text Color */
-    background-color: transparent !important; /* Ensure no other bg color */
+    color: var(--navbar-link-color) !important;
+    background-color: transparent !important;
 }
 .navbar .nav-link:hover,
 .nav-menu .top-row .nav-link:hover,
 .sidebar .top-row .nav-link:hover,
 main > .top-row a:hover,
 main > .top-row .btn-link:hover {
-    color: var(--navbar-link-hover-color) !important; /* Ocean Breeze Text Color (no change on hover, bg changes) */
-    background-color: var(--ocean-breeze-link-hover-bg) !important; /* Subtle hover background */
+    color: var(--navbar-link-hover-color) !important;
+    background-color: var(--sidebar-link-hover-bg) !important; /* Consistent hover with sidebar links */
 }
 .navbar .nav-link.active,
 .nav-menu .top-row .nav-link.active,
 .sidebar .top-row .nav-link.active,
 main > .top-row a.active {
-    color: var(--ocean-breeze-text-color) !important;
+    color: var(--sidebar-active-text-color) !important;
     font-weight: bold;
-    background-color: var(--ocean-breeze-active-bg) !important; /* Subtle active background */
+    background-color: var(--sidebar-active-bg) !important; /* Consistent active with sidebar links */
 }
 
-/* Sidebar NavLinks (distinct from top-row links in sidebar) - Ocean Breeze Theme */
+/* Sidebar NavLinks (distinct from top-row links in sidebar) - Purple Theme */
 .sidebar .nav-item ::deep .nav-link {
     color: var(--sidebar-link-color) !important;
     background: none !important;
     border: none !important;
 }
 .sidebar .nav-item ::deep .nav-link:hover {
-    color: var(--sidebar-link-hover-color) !important;
-    background-color: var(--ocean-breeze-link-hover-bg) !important;
+    color: var(--sidebar-link-color) !important;  /* Text color doesn't change on hover */
+    background-color: var(--sidebar-link-hover-bg) !important;
 }
 .sidebar .nav-item ::deep a.active {
     background-color: var(--sidebar-active-bg) !important;
@@ -144,7 +136,7 @@ main > .top-row a.active {
     background-color: var(--sidebar-bg-start) !important; /* Fallback */
 }
 
-/* Update Button styling for light theme */
+/* Update Button styling for Purple theme */
 .btn-primary {
     background-color: var(--button-primary-bg) !important;
     border-color: var(--button-primary-bg) !important;
@@ -167,25 +159,24 @@ main > .top-row a.active {
     color: var(--button-secondary-text) !important;
 }
 
-/* Update Focus indicator for light theme */
+/* Navbar Toggler icon for purple background */
+.navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(var(--purple-white-rgb), 0.75)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+}
+.navbar-toggler {
+    border-color: rgba(var(--purple-white-rgb), 0.25) !important;
+    color: rgba(var(--purple-white-rgb), 0.75) !important;
+}
+.navbar-toggler:checked {
+    background-color: rgba(var(--purple-white-rgb), 0.1) !important;
+}
+
+/* Focus indicator with purple primary */
 .btn:focus, .btn:active:focus,
 .btn-link.nav-link:focus,
 .form-control:focus,
 .form-check-input:focus {
-  box-shadow: 0 0 0 0.25rem rgba(var(--ocean-primary-rgb), .25) !important; /* Lighter focus ring for light theme */
-}
-
-/* Navbar Toggler - adjust for Ocean Breeze navbar background */
-.navbar-toggler {
-    color: var(--ocean-breeze-text-color) !important;
-    border: 1px solid rgba(var(--ocean-dark-text-rgb), 0.2) !important; /* Border can remain subtle dark */
-}
-.navbar-toggler-icon {
-    /* Uses --ocean-breeze-text-color for the stroke */
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(var(--ocean-breeze-text-color-rgb), 0.75)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
-}
-.navbar-toggler:checked {
-    background-color: rgba(var(--ocean-breeze-text-color-rgb), 0.1) !important;
+  box-shadow: 0 0 0 0.25rem rgba(var(--purple-primary-rgb), .25) !important;
 }
 
 /* Placeholder for NavMenu container specific styles if needed later */
