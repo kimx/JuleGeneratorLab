@@ -1,125 +1,128 @@
 :root {
-    /* Light Theme */
-    --ocean-primary: #007bff; /* Bootstrap's default blue - good for primary actions */
+    /* Light Theme with Ocean Breeze Navbar/Sidebar */
+    --ocean-primary: #007bff; /* Retain for primary actions like buttons */
     --ocean-primary-rgb: 0,123,255;
-    --ocean-secondary: #6c757d; /* Bootstrap's default secondary gray */
+    --ocean-secondary: #6c757d;
     --ocean-secondary-rgb: 108,117,125;
 
-    --ocean-light-bg: #f8f9fa;    /* Very light gray for overall page background */
-    --ocean-white-bg: #ffffff;    /* Pure white for main content area */
-    --ocean-dark-text: #212529;   /* Standard dark gray for text */
-    --ocean-dark-text-rgb: 33,37,41; /* RGB for --ocean-dark-text */
-    --ocean-light-text: #f8f9fa;  /* Light text for use on dark primary/secondary backgrounds (e.g., buttons) */
+    --ocean-light-bg: #f8f9fa;    /* Overall page background (very light gray) */
+    --ocean-white-bg: #ffffff;    /* Main content area (white) */
+    --ocean-dark-text: #212529;   /* Default dark text for light backgrounds */
+    --ocean-dark-text-rgb: 33,37,41;
+    --ocean-light-text-on-dark-bg: #f8f9fa; /* Light text for use on dark primary/secondary buttons */
 
-    --ocean-accent: #17a2b8;   /* Teal - for accents, links */
+    --ocean-accent: #17a2b8;   /* Teal - for general links if they are not on the blue nav/sidebar */
     --ocean-accent-rgb: 23,162,184;
 
-    /* Theme variable setup */
+    /* NEW: Ocean Breeze Colors */
+    --ocean-breeze-navbar-bg: #A0D2DB; /* Light sky/ocean blue for Navbar */
+    --ocean-breeze-sidebar-start: #BEE3DB; /* Slightly lighter, greener-blue for Sidebar start */
+    --ocean-breeze-sidebar-end: #A0D2DB;   /* Matches navbar for Sidebar end, creating subtle gradient */
+    --ocean-breeze-text-color: #004052; /* Darker teal/blue for text on ocean breeze backgrounds */
+    --ocean-breeze-text-color-rgb: 0,64,82; /* RGB for --ocean-breeze-text-color */
+    --ocean-breeze-link-hover-bg: rgba(0,64,82,0.1); /* Subtle dark hover for links on ocean backgrounds */
+    --ocean-breeze-active-bg: rgba(0,64,82,0.15); /* Slightly more pronounced for active links */
+
+    /* Main content and body setup */
     --main-content-bg: var(--ocean-white-bg);
     --ocean-body-bg: var(--ocean-light-bg);
     --ocean-body-color: var(--ocean-dark-text);
-    --ocean-heading-color: var(--ocean-primary); /* Primary color for headings */
-    --ocean-link-color: var(--ocean-accent);
-    --ocean-link-hover-color: #117a8b; /* Darker teal for hover */
+    --ocean-heading-color: var(--ocean-primary);
+    --ocean-link-color: var(--ocean-accent); /* General links in main content */
+    --ocean-link-hover-color: #117a8b;
 
-    /* Sidebar - Light theme */
-    --sidebar-bg-start: #e9ecef; /* Light gray */
-    --sidebar-bg-end: #dee2e6;   /* Slightly darker gray for subtle gradient */
-    --sidebar-link-color: var(--ocean-dark-text);
-    --sidebar-link-hover-color: var(--ocean-primary);
-    --sidebar-active-bg: rgba(var(--ocean-primary-rgb), 0.1); /* Light primary shade for active */
-    --sidebar-active-text-color: var(--ocean-primary);
+    /* Sidebar - Ocean Breeze */
+    --sidebar-bg-start: var(--ocean-breeze-sidebar-start);
+    --sidebar-bg-end: var(--ocean-breeze-sidebar-end);
+    --sidebar-link-color: var(--ocean-breeze-text-color);
+    --sidebar-link-hover-color: var(--ocean-breeze-text-color); /* Keep text color, change background */
+    --sidebar-active-bg: var(--ocean-breeze-active-bg);
+    --sidebar-active-text-color: var(--ocean-breeze-text-color);
 
-    /* Navbar / Main Top Row - Light theme */
-    --navbar-bg: var(--ocean-white-bg); /* White navbar background */
-    --navbar-link-color: var(--ocean-primary); /* Primary color for links */
-    --navbar-link-hover-color: var(--ocean-link-hover-color);
-    --navbar-brand-color: var(--ocean-primary);
-    --navbar-border-color: #dee2e6; /* Light border for navbar */
+    /* Navbar / Main Top Row - Ocean Breeze */
+    --navbar-bg: var(--ocean-breeze-navbar-bg);
+    --navbar-link-color: var(--ocean-breeze-text-color);
+    --navbar-link-hover-color: var(--ocean-breeze-text-color); /* Keep text color, change background */
+    --navbar-brand-color: var(--ocean-breeze-text-color);
+    --navbar-border-color: #85B8C1; /* Slightly darker shade of navbar bg for border */
 
-    /* Buttons - Standard Bootstrap-like appearance */
+    /* Buttons - Standard Bootstrap-like appearance (remain as is unless specified) */
     --button-primary-bg: var(--ocean-primary);
-    --button-primary-hover-bg: #0069d9; /* Darker blue for hover */
-    --button-primary-text: var(--ocean-white-bg); /* White text on blue button */
+    --button-primary-hover-bg: #0069d9;
+    --button-primary-text: var(--ocean-white-bg);
 
     --button-secondary-bg: var(--ocean-secondary);
-    --button-secondary-hover-bg: #5a6268; /* Darker gray for hover */
-    --button-secondary-text: var(--ocean-white-bg); /* White text on gray button */
+    --button-secondary-hover-bg: #5a6268;
+    --button-secondary-text: var(--ocean-white-bg);
 
-    --ocean-white-rgb: 255,255,255; /* Kept for navbar-toggler or other specific uses */
+    --ocean-white-rgb: 255,255,255;
 }
 
-/* Update body to use new light theme variables */
+/* Body, main content, headings, general links - should be mostly fine from previous light theme setup */
 body {
     background-color: var(--ocean-body-bg) !important;
     color: var(--ocean-body-color) !important;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
 }
-
-/* Ensure main content area has a white background */
-main { /* This is a common selector for the main content block */
-    background-color: var(--main-content-bg) !important; /* --main-content-bg is #ffffff */
-    /* Add padding if needed, or ensure existing padding is sufficient */
-    /* padding: 1rem; */ /* Example padding */
+main {
+    background-color: var(--main-content-bg) !important;
 }
-
-/* Update headings */
 h1, h2, h3, h4, h5, h6 {
     color: var(--ocean-heading-color);
 }
-
-/* Update general links */
-a, .btn-link {
+/* General links in main content area */
+main a, main .btn-link { /* More specific selector for main content links */
     color: var(--ocean-link-color) !important;
 }
-a:hover, .btn-link:hover {
+main a:hover, main .btn-link:hover {
     color: var(--ocean-link-hover-color) !important;
-    text-decoration: none;
 }
 
-/* Update Navbar/Main Top Row specific styles for light theme */
+
+/* Update Navbar/Main Top Row specific styles for Ocean Breeze theme */
 .nav-menu .top-row,
 .sidebar .top-row,
-.navbar-dark.top-row, /* This might need to become .navbar-light if structure implies it */
+.navbar-dark.top-row,
 .navbar,
 main > .top-row {
-    background-color: var(--navbar-bg) !important;
+    background-color: var(--navbar-bg) !important; /* Ocean Breeze Navbar BG */
     border-bottom: 1px solid var(--navbar-border-color) !important;
 }
 
 .navbar .navbar-brand,
 .nav-menu .top-row .navbar-brand,
 .sidebar .top-row .navbar-brand,
-main > .top-row .navbar-brand {
-    color: var(--navbar-brand-color) !important;
+main > .top-row .navbar-brand { /* Assuming main top row also gets this branding */
+    color: var(--navbar-brand-color) !important; /* Ocean Breeze Text Color */
 }
 
 /* Links in Navbar / NavMenu's top row / Main content top row */
 .navbar .nav-link,
 .nav-menu .top-row .nav-link,
-.sidebar .top-row .nav-link,
+.sidebar .top-row .nav-link, /* Links in the top part of the sidebar */
 main > .top-row a,
 main > .top-row .btn-link {
-    color: var(--navbar-link-color) !important;
+    color: var(--navbar-link-color) !important; /* Ocean Breeze Text Color */
+    background-color: transparent !important; /* Ensure no other bg color */
 }
 .navbar .nav-link:hover,
 .nav-menu .top-row .nav-link:hover,
 .sidebar .top-row .nav-link:hover,
 main > .top-row a:hover,
 main > .top-row .btn-link:hover {
-    color: var(--navbar-link-hover-color) !important;
-    /* No background change on hover for light theme top-row links by default */
+    color: var(--navbar-link-hover-color) !important; /* Ocean Breeze Text Color (no change on hover, bg changes) */
+    background-color: var(--ocean-breeze-link-hover-bg) !important; /* Subtle hover background */
 }
 .navbar .nav-link.active,
 .nav-menu .top-row .nav-link.active,
 .sidebar .top-row .nav-link.active,
-main > .top-row a.active { /* Assuming active class can apply to general links too */
-    color: var(--ocean-primary) !important; /* Emphasize active link */
+main > .top-row a.active {
+    color: var(--ocean-breeze-text-color) !important;
     font-weight: bold;
-    /* background-color: transparent !important; /* Ensure no unwanted background */
+    background-color: var(--ocean-breeze-active-bg) !important; /* Subtle active background */
 }
 
-/* Sidebar NavLinks (distinct from top-row links in sidebar) - Light Theme */
+/* Sidebar NavLinks (distinct from top-row links in sidebar) - Ocean Breeze Theme */
 .sidebar .nav-item ::deep .nav-link {
     color: var(--sidebar-link-color) !important;
     background: none !important;
@@ -127,7 +130,7 @@ main > .top-row a.active { /* Assuming active class can apply to general links t
 }
 .sidebar .nav-item ::deep .nav-link:hover {
     color: var(--sidebar-link-hover-color) !important;
-    background-color: rgba(var(--ocean-primary-rgb), 0.05) !important; /* Very subtle primary shade for hover */
+    background-color: var(--ocean-breeze-link-hover-bg) !important;
 }
 .sidebar .nav-item ::deep a.active {
     background-color: var(--sidebar-active-bg) !important;
@@ -172,16 +175,17 @@ main > .top-row a.active { /* Assuming active class can apply to general links t
   box-shadow: 0 0 0 0.25rem rgba(var(--ocean-primary-rgb), .25) !important; /* Lighter focus ring for light theme */
 }
 
-/* Navbar Toggler - adjust for light navbar background */
+/* Navbar Toggler - adjust for Ocean Breeze navbar background */
 .navbar-toggler {
-    color: var(--ocean-dark-text) !important; /* Dark toggler icon */
-    border: 1px solid rgba(var(--ocean-dark-text-rgb), 0.2) !important;
+    color: var(--ocean-breeze-text-color) !important;
+    border: 1px solid rgba(var(--ocean-dark-text-rgb), 0.2) !important; /* Border can remain subtle dark */
 }
 .navbar-toggler-icon {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(var(--ocean-dark-text-rgb), 0.75)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+    /* Uses --ocean-breeze-text-color for the stroke */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(var(--ocean-breeze-text-color-rgb), 0.75)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
 }
 .navbar-toggler:checked {
-    background-color: rgba(var(--ocean-dark-text-rgb), 0.1) !important;
+    background-color: rgba(var(--ocean-breeze-text-color-rgb), 0.1) !important;
 }
 
 /* Placeholder for NavMenu container specific styles if needed later */
