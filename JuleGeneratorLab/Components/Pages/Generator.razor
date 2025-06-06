@@ -33,7 +33,7 @@
                             <option value="">-- Select a Project --</option>
                             @foreach (var proj in availableProjects)
                             {
-                                <option value="@proj.Id">@proj.Name</option>
+                                <option value="@proj.Id" @key="proj.Id">@proj.Name</option>
                             }
                         </InputSelect>
                     </div>
@@ -106,7 +106,7 @@
                 <div class="list-group" style="max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 4px;">
                     @foreach (var tableNameInList in tables)
                     {
-                        <label class="list-group-item">
+                        <label class="list-group-item" @key="tableNameInList">
                             <input type="checkbox" class="form-check-input me-1"
                                    checked="@(tableSelectionState.ContainsKey(tableNameInList) ? tableSelectionState[tableNameInList] : false)"
                                    @onchange="(ChangeEventArgs e) => ToggleTableSelection(tableNameInList, e.Value)" />
@@ -136,7 +136,7 @@
 
             @foreach (var tableName in selectedRawTableNames) // Iterate using renamed variable
             {
-                <div class="p-3 my-2 border rounded">
+                <div class="p-3 my-2 border rounded" @key="tableName">
                     <h5>
                         Table: @tableName
                         @if (mainTableName == tableName)
@@ -173,7 +173,7 @@
                         <div class="list-group mb-2" style="max-height: 250px; overflow-y: auto;">
                             @foreach (var column in columns)
                             {
-                                <label class="list-group-item small">
+                                <label class="list-group-item small" @key="column.ColumnName">
                                     <input type="checkbox" class="form-check-input me-1"
                                            checked="@(columnSelectionStates.ContainsKey(tableName) && columnSelectionStates[tableName].ContainsKey(column.ColumnName) ? columnSelectionStates[tableName][column.ColumnName] : false)"
                                            @onchange="(ChangeEventArgs e) => ToggleColumnSelectionForTable(tableName, column.ColumnName, e.Value)" />
@@ -231,7 +231,7 @@
                 <h5 class="mt-3">Select Project Snippet Sets:</h5>
                 @foreach (var snippetSet in availableSnippetSetsForProject)
                 {
-                    <div class="form-check">
+                    <div class="form-check" @key="snippetSet.Id">
                         <input class="form-check-input" type="checkbox" id="set_@snippetSet.Id"
                                checked="@selectedSnippetSetIdsForGeneration.Contains(snippetSet.Id)"
                                @onchange="() => ToggleSnippetSetSelectionForGeneration(snippetSet.Id)">
@@ -248,7 +248,7 @@
                     {
                         @foreach (var snippet in FilteredSnippets) // Use FilteredSnippets
                         {
-                            <label class="list-group-item d-flex justify-content-between align-items-center">
+                            <label class="list-group-item d-flex justify-content-between align-items-center" @key="snippet.Name">
                                 <span>
                                     <input type="checkbox" class="form-check-input me-2"
                                            id="snippet_@snippet.Name.Replace(" ", "")"
@@ -1031,63 +1031,9 @@
             });
         }
 
-        if (multipleGeneratedCodeResults.Any())
-
-            List<ColumnDetail> allColsForThisTable = allColumnsForSelectedTables.TryGetValue(tableName, out var cols) ? cols : new List<ColumnDetail>();
-            List<ColumnDetail> selectedColsForThisTable = new List<ColumnDetail>();
-
-            if (columnSelectionStates.TryGetValue(tableName, out var selections))
-            {
-                foreach (var colDetail in allColsForThisTable)
-                {
-                    if (selections.TryGetValue(colDetail.ColumnName, out var isSelected) && isSelected)
-                    {
-                        selectedColsForThisTable.Add(colDetail);
-                    }
-                }
-            }
-
-            if (!selectedColsForThisTable.Any())
-            {
-                generatedCode = $"Error: Table '{tableName}' ({userAlias}) is selected but has no columns selected for generation. Please select columns or deselect the table.";
-                multipleGeneratedCodeResults.Clear();
-                StateHasChanged();
-                return;
-            }
-
-            tableContextsForGeneration.Add(new TableGenerationContext
-            {
-                TableName = tableName,
-                UserAlias = userAlias,
-                ClassName = CodeGenService.NormalizeClassName(userAlias), // ClassName is normalized UserAlias
-            SelectedColumns = selectedColsForThisTable
-        };
-        // The above was part of a larger block that seems to be remnants of old logic.
-        // The primary logic for creating mainTableContext and detailTableContext is already handled above.
-        // The loop `foreach (var tableName in selectedRawTableNames)` that contained this was removed
-        // in previous steps and replaced by direct handling of mainTableName and detailTableName.
-        // This block seems to be an orphaned remnant.
-        // However, to ensure the diff applies cleanly if this is somehow still in a different version of the file
-        // the agent is seeing, I will make the change minimal.
-        // The surrounding context suggests this part of the code might be from an unpatched version.
-        // Let's assume the main and detail context creation above is the *correct* and current one,
-        // and this is a remnant to be cleaned. For the purpose of this review, if this code is hit,
-        // IsPrimaryInContext should be removed.
-
-        // The following assignment to tableContextsForGeneration and its usage in the loop
-        // also seems like a remnant, as GenerateCode now takes main and detail contexts directly.
-        // For the review, I am focusing on removing IsPrimaryInContext.
-        // If this block is truly dead code, it should be removed entirely in a separate refactoring task.
-        /*
-            tableContextsForGeneration.Add(new TableGenerationContext
-            {
-                TableName = tableName,
-                UserAlias = userAlias,
-                ClassName = CodeGenService.NormalizeClassName(userAlias),
-                SelectedColumns = selectedColsForThisTable
-                // IsPrimaryInContext removed here as well if this block were active
-            });
-        */
+        // The remnant code block identified in the review has been removed.
+        // The logic now correctly concludes after populating multipleGeneratedCodeResults
+        // and then proceeds to the final status update.
 
         if (multipleGeneratedCodeResults.Any())
         {

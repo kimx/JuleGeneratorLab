@@ -1,17 +1,11 @@
 using System.Data.SqlClient;
 using System.Data;
 using System.Linq; // Required for LINQ operations like .Any()
+using JuleGeneratorLab.Models; // Added using statement
 
 namespace JuleGeneratorLab.Services
 {
-    public class ColumnDetail
-    {
-        public string ColumnName { get; set; } = string.Empty;
-        public string DataType { get; set; } = string.Empty;
-        public bool IsNullable { get; set; }
-        public bool IsPrimaryKey { get; set; }
-        // Add other properties as needed, e.g., MaxLength
-    }
+    // ColumnDetail class definition removed from here
 
     public class DatabaseSchemaReader
     {
