@@ -17,7 +17,8 @@
 <body>
     <Routes @rendermode="InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
-    <script src="js/textUtils.js"></script> {{! Adding the new script reference here }}
+    <script src="js/textUtils.js"></script>
+    <script src="js/jszip.min.js"></script> {{! Adding the new script reference here }}
     <script>
       window.saveAsFile = function(fileName, byteBase64) {
         var link = document.createElement('a');

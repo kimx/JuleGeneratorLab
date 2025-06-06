@@ -1,0 +1,159 @@
+@using JuleGeneratorLab.Models
+@inject IJSRuntime JSRuntime
+
+@if (IsVisible && Results != null && Results.Any())
+{
+    <div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);" aria-modal="true" role="dialog">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Generated Code</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (Results.Count == 1) // Simplified view if only one result
+                    {
+                        var singleResult = Results.First();
+                        <div class="mb-2">
+                            <label for="singleFileName" class="form-label small">Filename:</label>
+                            <input type="text" id="singleFileName" class="form-control form-control-sm" @bind="currentFileNames[0]" />
+                        </div>
+                        <textarea class="form-control" rows="15" readonly>@singleResult.GeneratedContent</textarea>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => CopyToClipboard(singleResult.GeneratedContent)">Copy</button>
+                            <button class="btn btn-sm btn-primary" @onclick="() => DownloadFile(0)">Download</button>
+                        </div>
+                    }
+                    else // Tabbed view for multiple results
+                    {
+                        <ul class="nav nav-tabs" id="generatedCodeTabs" role="tablist">
+                            @for (int i = 0; i < Results.Count; i++)
+                            {
+                                var capturedIndex = i; // Capture the loop variable
+                                var result = Results[capturedIndex];
+                                var tabId = $"tab-{capturedIndex}"; // Use capturedIndex for consistency
+
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link @(capturedIndex == activeTabIndex ? "active" : "")"
+                                            id="@($"btn-{tabId}")"
+                                            type="button"
+                                            role="tab"
+                                            aria-controls="@tabId"
+                                            aria-selected="@(capturedIndex == activeTabIndex ? "true" : "false")"
+                                            @onclick="() => SetActiveTab(capturedIndex)">
+                                        @result.SuggestedFileName
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                        <div class="tab-content" id="generatedCodeTabsContent">
+                            @for (int i = 0; i < Results.Count; i++)
+                            {
+                                var capturedIndex = i; // Capture the loop variable for safety here too, though less critical for @bind
+                                var result = Results[capturedIndex];
+                                var tabId = $"tab-{capturedIndex}"; // Use capturedIndex for consistency
+
+                                <div class="tab-pane fade @(capturedIndex == activeTabIndex ? "show active" : "")"
+                                     id="@tabId"
+                                     role="tabpanel"
+                                     aria-labelledby="@($"btn-{tabId}")">
+                                    <div class="mt-2 p-2 border rounded">
+                                        <div class="mb-2">
+                                            <label for="fileName_@capturedIndex" class="form-label small">Filename:</label>
+                                            <input type="text" id="fileName_@capturedIndex" class="form-control form-control-sm" @bind="currentFileNames[capturedIndex]" />
+                                        </div>
+                                        <textarea class="form-control" rows="15" readonly>@result.GeneratedContent</textarea>
+                                        <div class="mt-2">
+                                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => CopyToClipboard(result.GeneratedContent)">Copy Active Tab</button>
+                                            <button class="btn btn-sm btn-primary" @onclick="() => DownloadFile(capturedIndex)">Download Active Tab</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Close</button>
+                    @if (Results.Count > 1)
+                    {
+                        <button type="button" class="btn btn-success" @onclick="DownloadAllAsZip">Download All as ZIP</button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public List<Models.GeneratedCodeResult> Results { get; set; } = new List<Models.GeneratedCodeResult>();
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private int activeTabIndex = 0;
+    private List<string> currentFileNames = new List<string>();
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible && Results != null && Results.Any())
+        {
+            activeTabIndex = 0; // Existing logic
+            // Populate currentFileNames based on Results
+            currentFileNames = Results.Select(r => r.SuggestedFileName).ToList();
+        }
+        else
+        {
+            currentFileNames.Clear(); // Clear if no results or not visible
+        }
+    }
+
+    private void SetActiveTab(int index)
+    {
+        activeTabIndex = index;
+    }
+
+    private async Task CloseModal()
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task CopyToClipboard(string text)
+    {
+        if (!string.IsNullOrEmpty(text))
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+        }
+    }
+
+    private async Task DownloadFile(int index)
+    {
+        if (index < 0 || index >= Results.Count || index >= currentFileNames.Count) return;
+
+        string fileName = currentFileNames[index];
+        string content = Results[index].GeneratedContent;
+
+        if (string.IsNullOrEmpty(content) || string.IsNullOrEmpty(fileName)) return;
+        byte[] fileBytes = System.Text.Encoding.UTF8.GetBytes(content);
+        var base64 = Convert.ToBase64String(fileBytes);
+        // Ensure saveAsFile JS function is available (it should be)
+        await JSRuntime.InvokeVoidAsync("saveAsFile", fileName, $"data:application/octet-stream;base64,{base64}");
+    }
+
+    private async Task DownloadAllAsZip()
+    {
+        if (Results == null || !Results.Any() || currentFileNames == null || currentFileNames.Count != Results.Count)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "No files to zip or filename data is inconsistent.");
+            return;
+        }
+
+        var filesToZip = Results.Select((result, index) => new
+        {
+            name = currentFileNames[index], // Use the potentially edited filename
+            content = result.GeneratedContent
+        }).ToList();
+
+        string zipFileName = "GeneratedCode.zip";
+        await JSRuntime.InvokeVoidAsync("createAndDownloadZip", filesToZip, zipFileName);
+    }
+}

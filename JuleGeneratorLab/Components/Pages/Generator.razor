@@ -57,43 +57,42 @@
     <div class="row p-2 my-2 border rounded">
         <div class="col-12">
             <h4>@(isProjectLoaded && currentLoadedProject != null ? $"Database Connection (from Project: {currentLoadedProject.Name})" : "Database Connection (Manual)")</h4>
-
             @if (!isProjectLoaded)
             {
+                <div class="mb-3">
+                    <label for="serverName" class="form-label">Server Name</label>
+                    <input type="text" class="form-control" id="serverName" @bind="connectionDetails.ServerName" />
+                </div>
+                <div class="mb-3">
+                    <label for="databaseName" class="form-label">Database Name</label>
+                    <input type="text" class="form-control" id="databaseName" @bind="connectionDetails.DatabaseName" />
+                </div>
+                <div class="mb-3">
+                    <label for="authType" class="form-label">Authentication Type</label>
+                    <select class="form-select" id="authType" @bind="connectionDetails.AuthenticationType">
+                        <option value="windows">Windows Authentication</option>
+                        <option value="sql">SQL Server Authentication</option>
+                    </select>
+                </div>
+                @if (connectionDetails.AuthenticationType == "sql")
+                {
                     <div class="mb-3">
-                        <label for="serverName" class="form-label">Server Name</label>
-                        <input type="text" class="form-control" id="serverName" @bind="connectionDetails.ServerName" />
+                        <label for="userName" class="form-label">User Name</label>
+                        <input type="text" class="form-control" id="userName" @bind="connectionDetails.UserName" />
                     </div>
                     <div class="mb-3">
-                        <label for="databaseName" class="form-label">Database Name</label>
-                        <input type="text" class="form-control" id="databaseName" @bind="connectionDetails.DatabaseName" />
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" @bind="connectionDetails.Password" />
                     </div>
-                    <div class="mb-3">
-                        <label for="authType" class="form-label">Authentication Type</label>
-                        <select class="form-select" id="authType" @bind="connectionDetails.AuthenticationType">
-                            <option value="windows">Windows Authentication</option>
-                            <option value="sql">SQL Server Authentication</option>
-                        </select>
-                    </div>
-                    @if (connectionDetails.AuthenticationType == "sql")
-                    {
-                        <div class="mb-3">
-                            <label for="userName" class="form-label">User Name</label>
-                            <input type="text" class="form-control" id="userName" @bind="connectionDetails.UserName" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" @bind="connectionDetails.Password" />
-                        </div>
-                    }
-                    <button class="btn btn-success" @onclick="() => ConnectToDatabase(null)">Connect (Manual)</button>
+                }
+                <button class="btn btn-success" @onclick="() => ConnectToDatabase(null)">Connect (Manual)</button>
             }
             @if (!string.IsNullOrEmpty(connectionStatus))
             {
                 <div class="mt-2 alert @(isConnectionSuccess ? "alert-success" : "alert-danger")">
-                            @connectionStatus
-                        </div>
-                    }
+                    @connectionStatus
+                </div>
+            }
         </div>
     </div>
 
@@ -101,104 +100,177 @@
     <div class="row p-2 my-2 border rounded">
         <!-- Column 1: Database Schema Explorer -->
         <div class="col-md-5 border-end">
-            <h4>Database Schema</h4>
-                    @if (tables.Any())
+            <h4>Select Tables (Multiple)</h4>
+            @if (tables.Any())
+            {
+                <div class="list-group" style="max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 4px;">
+                    @foreach (var tableNameInList in tables)
                     {
-                        <div class="list-group" style="max-height: 300px; overflow-y: auto;">
-                            @foreach (var table in tables)
+                        <label class="list-group-item">
+                            <input type="checkbox" class="form-check-input me-1"
+                                   checked="@(tableSelectionState.ContainsKey(tableNameInList) ? tableSelectionState[tableNameInList] : false)"
+                                   @onchange="(ChangeEventArgs e) => ToggleTableSelection(tableNameInList, e.Value)" />
+                            @tableNameInList
+                        </label>
+                    }
+                </div>
+            }
+            else if (isConnectionSuccess)
+            {
+                <p>No tables found for the current connection.</p>
+            }
+            else
+            {
+                <p>Connect to a database to see tables.</p>
+            }
+
+            <h4 class="mt-3">Configure Selected Tables:</h4>
+            @if (!string.IsNullOrEmpty(columnLoadingError))
+            {
+                <div class="alert alert-danger">@columnLoadingError</div>
+            }
+            @if (!selectedTableNamesForGeneration.Any())
+            {
+                <p>No tables selected. Select tables above to configure them.</p>
+            }
+
+            @foreach (var tableName in selectedTableNamesForGeneration)
+            {
+                <div class="p-3 my-2 border rounded">
+                    <h5>Table: @tableName</h5>
+                    <div class="mb-3">
+                        <label for="alias_@tableName" class="form-label">Alias/ClassName:</label>
+                        <input type="text" id="alias_@tableName" class="form-control form-control-sm"
+                               @bind="tableAliases[tableName]" @bind:event="oninput" />
+                    </div>
+
+                    <h6>Columns for @tableName:</h6>
+                    @if (allColumnsForSelectedTables.TryGetValue(tableName, out var columns) && columns.Any())
+                    {
+                        <div class="list-group mb-2" style="max-height: 250px; overflow-y: auto;">
+                            @foreach (var column in columns)
                             {
-                                <button type="button"
-                                        class="list-group-item list-group-item-action @(currentSelectedTable == table ? "active" : "")"
-                                        @onclick="() => SelectTableAndLoadColumns(table)">
-                                    @table
-                                </button>
+                                <label class="list-group-item small">
+                                    <input type="checkbox" class="form-check-input me-1"
+                                           checked="@(columnSelectionStates.ContainsKey(tableName) && columnSelectionStates[tableName].ContainsKey(column.ColumnName) ? columnSelectionStates[tableName][column.ColumnName] : false)"
+                                           @onchange="(ChangeEventArgs e) => ToggleColumnSelectionForTable(tableName, column.ColumnName, e.Value)" />
+                                    @column.ColumnName <small class="text-muted">(@column.DataType @(column.IsPrimaryKey ? "PK" : "") @(column.IsNullable ? "?" : ""))</small>
+                                </label>
                             }
                         </div>
+                        <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => SelectAllColumnsForTable(tableName, true)">Select All</button>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => SelectAllColumnsForTable(tableName, false)">Deselect All</button>
                     }
-                    else if (isConnectionSuccess)
+                    else if (allColumnsForSelectedTables.ContainsKey(tableName))
                     {
-                        <p>No tables found.</p>
+                        <p>No columns found for this table or still loading.</p>
                     }
                     else
                     {
-                        <p>Connect to a database to see tables.</p>
+                         <p>Loading columns for @tableName...</p>
                     }
-
-                    @if (currentSelectedTable != null)
-                    {
-                        <h5 class="mt-3">Columns for @currentSelectedTable</h5>
-                        @if (!string.IsNullOrEmpty(columnSelectionError))
-                        {
-                            <div class="alert alert-danger mt-2">@columnSelectionError</div>
-                        }
-                        @if (columnsForSelectedTable.Any())
-                        {
-                            <div class="list-group mt-2" style="max-height: 400px; overflow-y: auto;">
-                                @foreach (var column in columnsForSelectedTable)
-                                {
-                                    <label class="list-group-item">
-                                        <input type="checkbox" class="form-check-input me-1"
-                                               checked="@(selectedColumns.ContainsKey(column.ColumnName) ? selectedColumns[column.ColumnName] : false)"
-                                               @onchange="() => ToggleColumnSelection(column.ColumnName)" />
-                                        @column.ColumnName <small class="text-muted">(@column.DataType @(column.IsPrimaryKey ? "PK" : "") @(column.IsNullable ? "?" : ""))</small>
-                                    </label>
-                                }
-                            </div>
-                            <button class="btn btn-sm btn-outline-secondary mt-2" @onclick="() => SelectAllColumns(true)">Select All</button>
-                            <button class="btn btn-sm btn-outline-secondary mt-2" @onclick="() => SelectAllColumns(false)">Deselect All</button>
-                        }
-                        else if (string.IsNullOrEmpty(columnSelectionError))
-                        {
-                            <p>No columns found for this table or still loading.</p>
-                        }
-                    }
+                </div>
+            }
         </div>
 
         <!-- Column 2: Snippet Selection & Configuration -->
         <div class="col-md-7">
-            <h4>Snippet Configuration</h4>
-                    <div class="mb-3">
-                        <label for="snippetSelector" class="form-label">Select Code Snippet:</label>
-                        <select class="form-select" id="snippetSelector" @bind="selectedSnippetName">
-                            @if (availableSnippets.Any())
-                            {
-                                @foreach (var snippet in availableSnippets)
-                                {
-                                    <option value="@snippet.Name">@snippet.Name - @snippet.Description</option>
-                                }
-                            }
-                            else
-                            {
-                                <option value="">No snippets loaded</option>
-                            }
-                        </select>
-                    </div>
+            <h4>Generation Parameters</h4>
+            <div class="mb-3">
+                <label for="namespaceInput" class="form-label">Namespace:</label>
+                <input type="text" class="form-control" id="namespaceInput" @bind="currentNamespace" placeholder="Enter namespace (e.g., MyProject.Models)" />
+            </div>
+            <div class="mb-3">
+                <label for="programNameInput" class="form-label">Program Name:</label>
+                <input type="text" class="form-control" id="programNameInput" @bind="currentProgramName" placeholder="Enter program/generator name (e.g., MyAwesomeGenerator)" />
+            </div>
 
-                    @if (!string.IsNullOrEmpty(selectedSnippetName))
+            <h4 class="mt-3">Snippet Selection</h4>
+            <h5>Snippet Selection Mode:</h5>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="snippetSelectionModeOptions" id="selectIndividualMode" value="individual" @onchange="@(() => HandleSnippetSelectionModeChange("individual"))" checked="@(snippetSelectionMode == "individual")">
+                <label class="form-check-label" for="selectIndividualMode">
+                    Select Individual Snippets
+                </label>
+            </div>
+            @if (isProjectLoaded && availableSnippetSetsForProject.Any())
+            {
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="snippetSelectionModeOptions" id="selectFromSetsMode" value="sets" @onchange="@(() => HandleSnippetSelectionModeChange("sets"))" checked="@(snippetSelectionMode == "sets")">
+                    <label class="form-check-label" for="selectFromSetsMode">
+                        Select Snippet Set(s) from Project
+                    </label>
+                </div>
+            }
+
+            @if (snippetSelectionMode == "sets" && isProjectLoaded && availableSnippetSetsForProject.Any())
+            {
+                <h5 class="mt-3">Select Project Snippet Sets:</h5>
+                @foreach (var snippetSet in availableSnippetSetsForProject)
+                {
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="set_@snippetSet.Id"
+                               checked="@selectedSnippetSetIdsForGeneration.Contains(snippetSet.Id)"
+                               @onchange="() => ToggleSnippetSetSelectionForGeneration(snippetSet.Id)">
+                        <label class="form-check-label" for="set_@snippetSet.Id">@snippetSet.Name (@snippetSet.Description)</label>
+                    </div>
+                }
+            }
+
+            @if (snippetSelectionMode == "individual")
+            {
+                <h5 class="mt-3">Select Individual Snippets:</h5>
+                <div class="list-group mt-2" style="max-height: 300px; overflow-y: auto;">
+                    @if (availableSnippets.Any())
                     {
-                        var selectedSnippet = availableSnippets.FirstOrDefault(s => s.Name == selectedSnippetName);
-                        if (selectedSnippet != null)
+                        @foreach (var snippet in availableSnippets)
                         {
-                            <div class="mt-2">
-                                <h6>Snippet Preview (Template):</h6>
-                                <pre style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; border-radius: 4px;"><code>@selectedSnippet.Template</code></pre>
-                            </div>
+                            <label class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>
+                                    <input type="checkbox" class="form-check-input me-2"
+                                           id="snippet_@snippet.Name.Replace(" ", "")"
+                                           checked="@(individualSnippetSelectionState.ContainsKey(snippet.Name) ? individualSnippetSelectionState[snippet.Name] : false)"
+                                           @onchange="() => ToggleIndividualSnippetSelection(snippet.Name)" />
+                                    @snippet.Name
+                                </span>
+                                <small class="text-muted">@snippet.Description</small>
+                            </label>
                         }
                     }
-                    <button class="btn btn-primary mt-2" @onclick="HandleGenerateCode">Generate Code</button>
+                    else
+                    {
+                        <p class="list-group-item">No snippets available for selection.</p>
+                    }
+                </div>
+                @if (availableSnippets.Any())
+                {
+                    <button class="btn btn-sm btn-outline-secondary mt-2 me-1" @onclick="() => SelectAllIndividualSnippets(true)">Select All</button>
+                    <button class="btn btn-sm btn-outline-secondary mt-2" @onclick="() => SelectAllIndividualSnippets(false)">Deselect All</button>
+                }
+            }
+            <button class="btn btn-primary mt-3" @onclick="HandleGenerateCode">Generate Code</button>
         </div>
     </div>
 
-    <!-- Row 3: Generated Code -->
+    <!-- Row 3: Generated Code Output Status -->
     <div class="row p-2 my-2 border rounded">
         <div class="col-12">
-            <h4>Generated Code</h4>
-                    <textarea class="form-control" rows="10" readonly>@generatedCode</textarea>
-                    <button class="btn btn-info mt-2" @onclick="CopyToClipboard">Copy to Clipboard</button>
-                    <button class="btn btn-success mt-2" @onclick="DownloadGeneratedCode">Download as File</button>
+            <h4>Generation Status</h4>
+            @if (!string.IsNullOrWhiteSpace(generatedCode))
+            {
+                <div class="alert alert-info">@generatedCode</div>
+            }
+            else
+            {
+                 <p><em>Code generation results will appear in a modal.</em></p>
+            }
         </div>
     </div>
 </div>
+
+<GeneratedCodeModal Results="multipleGeneratedCodeResults"
+                  IsVisible="isModalVisible"
+                  OnClose="CloseGeneratedCodeModal" />
 
 @code {
     private ConnectionDetails connectionDetails = new ConnectionDetails();
@@ -206,29 +278,47 @@
     private bool isConnectionSuccess = false;
     private List<string> tables = new List<string>();
 
-    // Project related properties
     private List<Project>? availableProjects;
     private Guid? selectedProjectId;
     private Project? currentLoadedProject;
     private string? projectLoadStatus;
     private bool isProjectLoaded = false;
 
-    private string? currentSelectedTable;
-    private List<ColumnDetail> columnsForSelectedTable = new List<ColumnDetail>();
-    private Dictionary<string, bool> selectedColumns = new Dictionary<string, bool>(); // ColumnName -> IsSelected
-    private string? columnSelectionError;
+    private List<string> selectedTableNamesForGeneration = new List<string>();
+    private Dictionary<string, bool> tableSelectionState = new Dictionary<string, bool>();
+
+    private Dictionary<string, string> tableAliases = new Dictionary<string, string>();
+    private Dictionary<string, List<ColumnDetail>> allColumnsForSelectedTables = new Dictionary<string, List<ColumnDetail>>();
+    private Dictionary<string, Dictionary<string, bool>> columnSelectionStates = new Dictionary<string, Dictionary<string, bool>>();
+    private string columnLoadingError = string.Empty;
 
     private List<CodeSnippet> availableSnippets = new List<CodeSnippet>();
-    private string? selectedSnippetName; // To store the name of the selected snippet
+    private string? currentNamespace = "";
+    private string? currentProgramName = "";
+    private List<SnippetSet> availableSnippetSetsForProject = new List<SnippetSet>();
+    private HashSet<Guid> selectedSnippetSetIdsForGeneration = new HashSet<Guid>();
+    private Dictionary<string, bool> individualSnippetSelectionState = new Dictionary<string, bool>();
+    private string snippetSelectionMode = "individual";
 
-    protected override async Task OnInitializedAsync() // Changed from OnInitialized
+    private List<Models.GeneratedCodeResult> multipleGeneratedCodeResults = new List<Models.GeneratedCodeResult>();
+    private bool isModalVisible = false;
+    private string generatedCode = "// Select options and click 'Generate Code'.";
+
+    protected override async Task OnInitializedAsync()
     {
-        await SnippetService.EnsureInitializedAsync(); // New line
-        availableSnippets = SnippetService.Snippets;
-        if (availableSnippets.Any())
+        await SnippetService.EnsureInitializedAsync();
+        availableSnippets = SnippetService.Snippets.ToList();
+        individualSnippetSelectionState.Clear();
+        foreach (var snippet in availableSnippets)
         {
-            selectedSnippetName = availableSnippets.First().Name; // Default to first snippet
+            individualSnippetSelectionState[snippet.Name] = false;
         }
+        currentNamespace = "";
+        currentProgramName = "";
+        tableSelectionState = new Dictionary<string, bool>();
+        tableAliases = new Dictionary<string, string>();
+        allColumnsForSelectedTables = new Dictionary<string, List<ColumnDetail>>();
+        columnSelectionStates = new Dictionary<string, Dictionary<string, bool>>();
 
         try
         {
@@ -239,9 +329,7 @@
             projectLoadStatus = $"Error loading projects: {ex.Message}";
             availableProjects = new List<Project>();
         }
-
-        // Any other async initialization logic can go here
-        await base.OnInitializedAsync(); // Call base method
+        await base.OnInitializedAsync();
     }
 
     private async Task LoadSelectedProject()
@@ -249,140 +337,147 @@
         projectLoadStatus = null;
         currentLoadedProject = null;
         isProjectLoaded = false;
-        connectionStatus = null; // Clear previous manual connection status
-        tables.Clear(); // Clear tables from previous connection
-        currentSelectedTable = null;
-        columnsForSelectedTable.Clear();
-        selectedColumns.Clear();
+        connectionStatus = null;
+        tables.Clear();
+        selectedTableNamesForGeneration.Clear();
+        tableSelectionState.Clear();
+        availableSnippetSetsForProject.Clear();
+        selectedSnippetSetIdsForGeneration.Clear();
+
+        tableAliases.Clear();
+        allColumnsForSelectedTables.Clear();
+        columnSelectionStates.Clear();
+        columnLoadingError = string.Empty;
 
         if (selectedProjectId == null || selectedProjectId == Guid.Empty)
         {
             projectLoadStatus = "Switched to manual mode. All snippets available.";
-            currentLoadedProject = null;
-            isProjectLoaded = false;
-            availableSnippets = SnippetService.Snippets; // Show all snippets
-            if (availableSnippets.Any() && (string.IsNullOrEmpty(selectedSnippetName) || !availableSnippets.Any(s => s.Name == selectedSnippetName)))
+            availableSnippets = SnippetService.Snippets.ToList();
+            individualSnippetSelectionState.Clear();
+            foreach (var snippet in availableSnippets)
             {
-                selectedSnippetName = availableSnippets.First().Name;
+                individualSnippetSelectionState[snippet.Name] = false;
             }
-            // Clear the DB schema view but leave manual connectionDetails fields as they are
-            tables.Clear();
-            currentSelectedTable = null;
-            columnsForSelectedTable.Clear();
-            selectedColumns.Clear();
+            snippetSelectionMode = "individual";
+            currentNamespace = "";
+            currentProgramName = "";
             connectionStatus = "Manual mode. Please connect to a database.";
             isConnectionSuccess = false;
-            StateHasChanged();
-            return;
+            await UpdateAndPruneSelectedTableContexts();
         }
-
-        try
+        else
         {
-            currentLoadedProject = await ProjectSvc.GetProjectByIdAsync(selectedProjectId.Value);
-            if (currentLoadedProject == null)
+            try
             {
-                projectLoadStatus = "Failed to load selected project details.";
-                return;
-            }
-
-            isProjectLoaded = true; // Set this early after project is confirmed loaded
-            projectLoadStatus = $"Project '{currentLoadedProject.Name}' loaded."; // Initial status
-
-            if (currentLoadedProject.DatabaseConnectionId.HasValue && currentLoadedProject.DatabaseConnectionId.Value != Guid.Empty)
-            {
-                var dbConn = await DbConnectionSvc.GetConnectionByIdAsync(currentLoadedProject.DatabaseConnectionId.Value);
-                if (dbConn != null)
+                currentLoadedProject = await ProjectSvc.GetProjectByIdAsync(selectedProjectId.Value);
+                if (currentLoadedProject == null)
                 {
-                    projectLoadStatus += $" Database connection '{dbConn.Name}' will be used.";
-                    // Automatically connect using the project's connection string
-                    await ConnectToDatabase(dbConn.ConnectionString);
+                    projectLoadStatus = "Failed to load selected project details.";
+                    currentNamespace = "";
+                    currentProgramName = "";
+                    snippetSelectionMode = "individual";
+                    availableSnippets = SnippetService.Snippets.ToList();
+                    individualSnippetSelectionState.Clear();
+                    foreach (var snippet in availableSnippets) { individualSnippetSelectionState[snippet.Name] = false; }
+                    availableSnippetSetsForProject.Clear();
+                    selectedSnippetSetIdsForGeneration.Clear();
+                    selectedTableNamesForGeneration.Clear();
+                    tableSelectionState.Clear();
+                    tableAliases.Clear();
+                    allColumnsForSelectedTables.Clear();
+                    columnSelectionStates.Clear();
+                    columnLoadingError = string.Empty;
+                    await UpdateAndPruneSelectedTableContexts();
                 }
                 else
                 {
-                    projectLoadStatus += $" Its associated database connection (ID: {currentLoadedProject.DatabaseConnectionId.Value}) could not be found. Please check DB Connections.";
-                    // Clear DB specific views as connection is missing
-                    tables.Clear();
-                    currentSelectedTable = null;
-                    columnsForSelectedTable.Clear();
-                    selectedColumns.Clear();
-                    connectionStatus = "Project's DB connection not found. Connect manually or update project.";
-                    isConnectionSuccess = false;
-                }
-            }
-            else
-            {
-                projectLoadStatus += " It does not have a database connection configured.";
-                // Clear DB specific views as no DB is configured for project
-                tables.Clear();
-                currentSelectedTable = null;
-                columnsForSelectedTable.Clear();
-                selectedColumns.Clear();
-                connectionStatus = "Project loaded has no DB connection. Connect manually or select another project.";
-                isConnectionSuccess = false;
-            }
+                    isProjectLoaded = true;
+                    projectLoadStatus = $"Project '{currentLoadedProject.Name}' loaded.";
+                    currentNamespace = currentLoadedProject.Namespace ?? "";
+                    currentProgramName = "";
 
-            // Snippet Filtering Logic for Multiple Sets:
-            if (currentLoadedProject.SelectedSnippetSetIds != null && currentLoadedProject.SelectedSnippetSetIds.Any())
-            {
-                var combinedSnippetNames = new HashSet<string>();
-                List<string> foundSetNames = new List<string>();
-
-                foreach (var setId in currentLoadedProject.SelectedSnippetSetIds)
-                {
-                    var snippetSet = await SnippetSetSvc.GetSnippetSetByIdAsync(setId);
-                    if (snippetSet != null)
+                    if (currentLoadedProject.DatabaseConnectionId.HasValue && currentLoadedProject.DatabaseConnectionId.Value != Guid.Empty)
                     {
-                        foundSetNames.Add(snippetSet.Name);
-                        foreach (var snippetName in snippetSet.SnippetNames)
+                        var dbConn = await DbConnectionSvc.GetConnectionByIdAsync(currentLoadedProject.DatabaseConnectionId.Value);
+                        if (dbConn != null)
                         {
-                            combinedSnippetNames.Add(snippetName);
+                            projectLoadStatus += $" Database connection '{dbConn.Name}' will be used.";
+                            await ConnectToDatabase(dbConn.ConnectionString);
+                        }
+                        else
+                        {
+                            projectLoadStatus += $" Its associated database connection (ID: {currentLoadedProject.DatabaseConnectionId.Value}) could not be found.";
+                            tables.Clear();
+                            selectedTableNamesForGeneration.Clear();
+                            tableSelectionState.Clear();
+                            tableAliases.Clear();
+                            allColumnsForSelectedTables.Clear();
+                            columnSelectionStates.Clear();
+                            columnLoadingError = string.Empty;
+                            connectionStatus = "Project's DB connection not found.";
+                            isConnectionSuccess = false;
+                            await UpdateAndPruneSelectedTableContexts();
                         }
                     }
-                }
-
-                if (combinedSnippetNames.Any())
-                {
-                    var allGlobalSnippets = SnippetService.Snippets;
-                    availableSnippets = allGlobalSnippets.Where(s => combinedSnippetNames.Contains(s.Name)).ToList();
-                    projectLoadStatus += $" Using snippet sets: '{string.Join(", ", foundSetNames)}' ({availableSnippets.Count} unique snippets).";
-                    if (!availableSnippets.Any())
+                    else
                     {
-                        projectLoadStatus += " The selected snippet set(s) are empty or contain no matching loaded snippets.";
+                        projectLoadStatus += " It does not have a database connection configured.";
+                        tables.Clear();
+                        selectedTableNamesForGeneration.Clear();
+                        tableSelectionState.Clear();
+                        tableAliases.Clear();
+                        allColumnsForSelectedTables.Clear();
+                        columnSelectionStates.Clear();
+                        columnLoadingError = string.Empty;
+                        connectionStatus = "Project has no DB connection.";
+                        isConnectionSuccess = false;
+                        await UpdateAndPruneSelectedTableContexts();
                     }
-                }
-                else
-                {
-                    projectLoadStatus += " Selected snippet set(s) not found or are empty. Showing all snippets.";
-                    availableSnippets = SnippetService.Snippets; // Show all
-                }
-            }
-            else
-            {
-                projectLoadStatus += " No specific snippet set selected. Showing all snippets.";
-                availableSnippets = SnippetService.Snippets; // Show all
-            }
 
-            // Reset selected snippet if it's no longer in the (potentially filtered) list (this part is mostly the same)
-            if (availableSnippets.Any())
-            {
-                if (string.IsNullOrEmpty(selectedSnippetName) || !availableSnippets.Any(s => s.Name == selectedSnippetName))
-                {
-                    selectedSnippetName = availableSnippets.First().Name;
+                    var allGlobalSnippets = SnippetService.Snippets.ToList();
+                    if (currentLoadedProject.SelectedSnippetSetIds != null && currentLoadedProject.SelectedSnippetSetIds.Any())
+                    {
+                        List<SnippetSet> setsForProjectUI = new List<SnippetSet>();
+                        HashSet<string> snippetNamesFromProjectSets = new HashSet<string>();
+                        foreach (var setId in currentLoadedProject.SelectedSnippetSetIds)
+                        {
+                            var snipSet = await SnippetSetSvc.GetSnippetSetByIdAsync(setId);
+                            if (snipSet != null)
+                            {
+                                setsForProjectUI.Add(snipSet);
+                                foreach (var nameInSet in snipSet.SnippetNames) { snippetNamesFromProjectSets.Add(nameInSet); }
+                            }
+                        }
+                        availableSnippetSetsForProject = setsForProjectUI.OrderBy(s => s.Name).ToList();
+                        if (availableSnippetSetsForProject.Any())
+                        {
+                            snippetSelectionMode = "sets";
+                            availableSnippets = allGlobalSnippets.Where(s => snippetNamesFromProjectSets.Contains(s.Name)).ToList();
+                        }
+                        else
+                        {
+                            snippetSelectionMode = "individual";
+                            availableSnippets = allGlobalSnippets;
+                        }
+                    }
+                    else
+                    {
+                        snippetSelectionMode = "individual";
+                        availableSnippets = allGlobalSnippets;
+                    }
+                    individualSnippetSelectionState.Clear();
+                    foreach (var snippet in availableSnippets) { individualSnippetSelectionState[snippet.Name] = false; }
                 }
             }
-            else
+            catch (Exception ex)
             {
-                selectedSnippetName = null;
-            }
-        }
-        catch (Exception ex)
-        {
-            projectLoadStatus = $"Error loading project: {ex.Message}";
-            isProjectLoaded = false; // Ensure this is false on error
-            availableSnippets = SnippetService.Snippets; // Revert to all snippets on error
-             if (availableSnippets.Any() && (string.IsNullOrEmpty(selectedSnippetName) || !availableSnippets.Any(s => s.Name == selectedSnippetName)))
-            {
-                selectedSnippetName = availableSnippets.First().Name;
+                projectLoadStatus = $"Error loading project: {ex.Message}";
+                isProjectLoaded = false;
+                availableSnippets = SnippetService.Snippets.ToList();
+                currentNamespace = ""; currentProgramName = ""; snippetSelectionMode = "individual";
+                selectedTableNamesForGeneration.Clear(); tableSelectionState.Clear();
+                tableAliases.Clear(); allColumnsForSelectedTables.Clear(); columnSelectionStates.Clear(); columnLoadingError = string.Empty;
+                await UpdateAndPruneSelectedTableContexts();
             }
         }
         StateHasChanged();
@@ -390,22 +485,17 @@
 
     private class ConnectionDetails
     {
-        public string ServerName { get; set; } = "localhost"; // Default value
+        public string ServerName { get; set; } = "localhost";
         public string DatabaseName { get; set; } = "";
-        public string AuthenticationType { get; set; } = "windows"; // Default to Windows Auth
+        public string AuthenticationType { get; set; } = "windows";
         public string UserName { get; set; } = "";
         public string Password { get; set; } = "";
-
         public string BuildConnectionString()
         {
             if (AuthenticationType == "windows")
-            {
                 return $"Server={ServerName};Database={DatabaseName};Trusted_Connection=True;TrustServerCertificate=True;";
-            }
-            else // SQL Server Authentication
-            {
+            else
                 return $"Server={ServerName};Database={DatabaseName};User ID={UserName};Password={Password};TrustServerCertificate=True;";
-            }
         }
     }
 
@@ -414,215 +504,335 @@
         connectionStatus = "Connecting...";
         isConnectionSuccess = false;
         tables.Clear();
-        currentSelectedTable = null;
-        columnsForSelectedTable.Clear();
-        selectedColumns.Clear();
-        columnSelectionError = null;
+        selectedTableNamesForGeneration.Clear();
+        tableSelectionState.Clear();
+        tableAliases.Clear();
+        allColumnsForSelectedTables.Clear();
+        columnSelectionStates.Clear();
+        columnLoadingError = string.Empty;
         string connectionString;
 
         if (isProjectLoaded && !string.IsNullOrEmpty(connectionStringFromProject))
-        {
             connectionString = connectionStringFromProject;
-            // Update display fields for connectionDetails to reflect project's settings (optional, if shown)
-            // This might be complex if parsing is needed. For now, status messages will indicate project use.
-            // connectionDetails.ServerName = "Using Project Connection";
-            // connectionDetails.DatabaseName = ""; // Clear manual fields or mark as from project
-        }
-        else if (!isProjectLoaded) // Only build from manual details if not in project mode or project connection string is missing
-        {
+        else if (!isProjectLoaded)
             connectionString = connectionDetails.BuildConnectionString();
-        }
-        else // isProjectLoaded but connectionStringFromProject is null/empty (e.g. project has no DB configured)
+        else
         {
-            connectionStatus = "Project is loaded, but no database connection string was provided by the project. Cannot connect.";
+            connectionStatus = "Project is loaded, but no database connection string was provided.";
             isConnectionSuccess = false;
+            await UpdateAndPruneSelectedTableContexts();
             StateHasChanged();
             return;
         }
-
 
         try
         {
             var fetchedTables = DbSchemaReader.GetTables(connectionString);
-
             if (fetchedTables != null && fetchedTables.Any())
             {
-                tables = fetchedTables;
-                string dbName = isProjectLoaded ? (currentLoadedProject?.Name ?? "project") : connectionDetails.DatabaseName;
-                connectionStatus = $"Successfully connected (using {(isProjectLoaded ? $"project '{currentLoadedProject?.Name}'" : "manual settings")}) and retrieved {tables.Count} table(s).";
+                tables = fetchedTables.OrderBy(t => t).ToList();
+                connectionStatus = $"Successfully connected and retrieved {tables.Count} table(s).";
                 isConnectionSuccess = true;
+                tableSelectionState.Clear();
+                foreach (var tableNameInListLoop in tables)
+                {
+                    tableSelectionState[tableNameInListLoop] = false;
+                }
+                selectedTableNamesForGeneration.Clear();
             }
             else
             {
-                connectionStatus = $"Connected (using {(isProjectLoaded ? $"project '{currentLoadedProject?.Name}'" : "manual settings")}), but no user tables were found.";
-                isConnectionSuccess = true; // Connection itself was successful
-            }
-        }
-        catch (Exception ex) // Catch exceptions thrown by GetTables
-        {
-            connectionStatus = $"Error connecting: {ex.Message}";
-            if (ex.InnerException != null)
-            {
-                connectionStatus += $" Inner Exception: {ex.InnerException.Message}";
-            }
-            isConnectionSuccess = false;
-        }
-        await InvokeAsync(StateHasChanged); // Ensure UI updates after async operations
-    }
-
-    private async Task SelectTableAndLoadColumns(string tableName)
-    {
-        currentSelectedTable = tableName; // Assign first
-        columnsForSelectedTable.Clear();
-        selectedColumns.Clear();
-        columnSelectionError = null;
-
-        if (string.IsNullOrEmpty(currentSelectedTable)) // Now this check is meaningful
-        {
-            // This condition might not even be strictly necessary if tableName is always valid
-            // but as a guard or if tableName could be empty from UI, it's okay.
-            StateHasChanged();
-            return;
-        }
-
-        string connectionStringForColumns;
-        if (isProjectLoaded && currentLoadedProject?.DatabaseConnectionId != null)
-        {
-            var dbConn = await DbConnectionSvc.GetConnectionByIdAsync(currentLoadedProject.DatabaseConnectionId.Value);
-            if (dbConn == null) {
-                columnSelectionError = "Project's database connection not found for loading columns.";
-                StateHasChanged();
-                return;
-            }
-            connectionStringForColumns = dbConn.ConnectionString;
-        }
-        else if (!isProjectLoaded)
-        {
-            connectionStringForColumns = connectionDetails.BuildConnectionString();
-        }
-        else // Project loaded but no specific connection string (e.g. project has no DB)
-        {
-            columnSelectionError = "Cannot load columns: Project is loaded but has no configured database connection.";
-            StateHasChanged();
-            return;
-        }
-
-        try
-        {
-            columnsForSelectedTable = DbSchemaReader.GetColumns(connectionStringForColumns, currentSelectedTable);
-            foreach (var column in columnsForSelectedTable)
-            {
-                selectedColumns.Add(column.ColumnName, true); // Default to select all columns initially
+                connectionStatus = "Connected, but no user tables were found.";
+                isConnectionSuccess = true;
+                tableSelectionState.Clear();
+                selectedTableNamesForGeneration.Clear();
             }
         }
         catch (Exception ex)
         {
-            columnSelectionError = $"Error loading columns for table '{currentSelectedTable}': {ex.Message}";
-            if (ex.InnerException != null)
+            connectionStatus = $"Error connecting: {ex.Message}";
+            isConnectionSuccess = false;
+        }
+        await UpdateAndPruneSelectedTableContexts();
+        StateHasChanged();
+    }
+
+    private async Task UpdateAndPruneSelectedTableContexts()
+    {
+        columnLoadingError = string.Empty;
+        var currentSelection = selectedTableNamesForGeneration.ToHashSet();
+
+        var tablesToRemove = allColumnsForSelectedTables.Keys.Where(t => !currentSelection.Contains(t)).ToList();
+        foreach (var tableName in tablesToRemove)
+        {
+            allColumnsForSelectedTables.Remove(tableName);
+            tableAliases.Remove(tableName);
+            columnSelectionStates.Remove(tableName);
+        }
+
+        foreach (var tableName in selectedTableNamesForGeneration)
+        {
+            if (!allColumnsForSelectedTables.ContainsKey(tableName))
             {
-                columnSelectionError += $" Inner: {ex.InnerException.Message}";
+                tableAliases[tableName] = CodeGenService.NormalizeClassName(tableName);
+
+                string connectionStringForColumns;
+                if (isProjectLoaded && currentLoadedProject?.DatabaseConnectionId != null)
+                {
+                    var dbConn = await DbConnectionSvc.GetConnectionByIdAsync(currentLoadedProject.DatabaseConnectionId.Value);
+                    if (dbConn == null) {
+                        columnLoadingError += $"Project's DB connection not found for loading columns for {tableName}. ";
+                        allColumnsForSelectedTables[tableName] = new List<ColumnDetail>();
+                        columnSelectionStates[tableName] = new Dictionary<string, bool>();
+                        continue;
+                    }
+                    connectionStringForColumns = dbConn.ConnectionString;
+                }
+                else if (!isProjectLoaded && isConnectionSuccess)
+                {
+                    connectionStringForColumns = connectionDetails.BuildConnectionString();
+                }
+                else
+                {
+                    columnLoadingError += $"Cannot load columns for {tableName}: No valid DB connection. ";
+                    allColumnsForSelectedTables[tableName] = new List<ColumnDetail>();
+                    columnSelectionStates[tableName] = new Dictionary<string, bool>();
+                    continue;
+                }
+
+                try
+                {
+                    var columns = DbSchemaReader.GetColumns(connectionStringForColumns, tableName);
+                    allColumnsForSelectedTables[tableName] = columns ?? new List<ColumnDetail>();
+
+                    var selections = new Dictionary<string, bool>();
+                    foreach (var col in allColumnsForSelectedTables[tableName])
+                    {
+                        selections[col.ColumnName] = true;
+                    }
+                    columnSelectionStates[tableName] = selections;
+                }
+                catch (Exception ex)
+                {
+                    columnLoadingError += $"Error loading columns for {tableName}: {ex.Message}. ";
+                    allColumnsForSelectedTables[tableName] = new List<ColumnDetail>();
+                    columnSelectionStates[tableName] = new Dictionary<string, bool>();
+                }
             }
         }
         StateHasChanged();
     }
 
-    private void ToggleColumnSelection(string columnName)
+    private async Task ToggleTableSelection(string tableName, object? checkedValue)
     {
-        if (selectedColumns.ContainsKey(columnName))
+        bool isSelected = (bool)(checkedValue ?? false);
+        if (tableSelectionState.ContainsKey(tableName))
         {
-            selectedColumns[columnName] = !selectedColumns[columnName];
+            tableSelectionState[tableName] = isSelected;
+        }
+        selectedTableNamesForGeneration = tableSelectionState
+                                            .Where(kvp => kvp.Value)
+                                            .Select(kvp => kvp.Key)
+                                            .OrderBy(name => name)
+                                            .ToList();
+        await UpdateAndPruneSelectedTableContexts();
+    }
+
+    private void ToggleColumnSelectionForTable(string tableName, string columnName, object? checkedValue)
+    {
+        bool isSelected = (bool)(checkedValue ?? false);
+        if (columnSelectionStates.TryGetValue(tableName, out var selections))
+        {
+            selections[columnName] = isSelected;
             StateHasChanged();
         }
     }
 
-    private void SelectAllColumns(bool select)
+    private void SelectAllColumnsForTable(string tableName, bool select)
     {
-        if (columnsForSelectedTable.Any())
+        if (columnSelectionStates.TryGetValue(tableName, out var selections) &&
+            allColumnsForSelectedTables.TryGetValue(tableName, out var columns))
         {
-            foreach (var column in columnsForSelectedTable)
+            foreach (var col in columns)
             {
-                selectedColumns[column.ColumnName] = select;
+                selections[col.ColumnName] = select;
             }
             StateHasChanged();
         }
     }
 
-    private string generatedCode = "// Generated code will appear here.";
+    private void HandleSnippetSelectionModeChange(string mode)
+    {
+        snippetSelectionMode = mode;
+        if (mode == "individual") selectedSnippetSetIdsForGeneration.Clear();
+        StateHasChanged();
+    }
+
+    private void ToggleSnippetSetSelectionForGeneration(Guid setId)
+    {
+        if (selectedSnippetSetIdsForGeneration.Contains(setId))
+            selectedSnippetSetIdsForGeneration.Remove(setId);
+        else
+            selectedSnippetSetIdsForGeneration.Add(setId);
+        StateHasChanged();
+    }
+
+    private void ToggleIndividualSnippetSelection(string snippetName)
+    {
+        if (individualSnippetSelectionState.ContainsKey(snippetName))
+            individualSnippetSelectionState[snippetName] = !individualSnippetSelectionState[snippetName];
+        else
+            individualSnippetSelectionState[snippetName] = true;
+        StateHasChanged();
+    }
+
+    private void SelectAllIndividualSnippets(bool select)
+    {
+        var snippetNames = availableSnippets.Select(s => s.Name).ToList();
+        foreach (var name in snippetNames)
+            individualSnippetSelectionState[name] = select;
+        StateHasChanged();
+    }
 
     private async Task HandleGenerateCode()
     {
-        if (string.IsNullOrEmpty(currentSelectedTable) ||
-            !selectedColumns.Values.Any(isSelected => isSelected) || // Check if any column is actually selected
-            string.IsNullOrEmpty(selectedSnippetName))
+        multipleGeneratedCodeResults.Clear();
+        isModalVisible = false;
+        generatedCode = ""; // Clear previous status messages
+
+        if (!selectedTableNamesForGeneration.Any())
         {
-            generatedCode = "// Please select a table, at least one column, and a snippet first.";
+            generatedCode = "Please select at least one table.";
+            StateHasChanged();
             return;
         }
 
-        var snippetToUse = availableSnippets.FirstOrDefault(s => s.Name == selectedSnippetName);
-        if (snippetToUse == null)
+        List<CodeSnippet> snippetsToGenerate = new List<CodeSnippet>();
+        if (snippetSelectionMode == "individual")
         {
-            generatedCode = "// Selected snippet not found.";
+            var selectedNames = individualSnippetSelectionState.Where(kv => kv.Value).Select(kv => kv.Key).ToHashSet();
+            if (selectedNames.Any())
+            {
+                snippetsToGenerate = availableSnippets.Where(s => selectedNames.Contains(s.Name)).ToList();
+            }
+        }
+        else if (snippetSelectionMode == "sets")
+        {
+            if (selectedSnippetSetIdsForGeneration.Any() && availableSnippetSetsForProject.Any())
+            {
+                var snippetNamesFromSelectedSets = new HashSet<string>();
+                foreach (var setId in selectedSnippetSetIdsForGeneration)
+                {
+                    var snippetSet = availableSnippetSetsForProject.FirstOrDefault(s => s.Id == setId);
+                    if (snippetSet != null)
+                    {
+                        foreach (var name in snippetSet.SnippetNames)
+                        {
+                            snippetNamesFromSelectedSets.Add(name);
+                        }
+                    }
+                }
+                await SnippetService.EnsureInitializedAsync();
+                snippetsToGenerate = SnippetService.Snippets.Where(s => snippetNamesFromSelectedSets.Contains(s.Name)).ToList();
+            }
+        }
+
+        if (!snippetsToGenerate.Any())
+        {
+            generatedCode = "Please select at least one code snippet or a snippet set.";
+            StateHasChanged();
             return;
         }
 
-        // Get only the details of columns that are marked as true in selectedColumns
-        var columnsToGenerate = columnsForSelectedTable
-                                  .Where(col => selectedColumns.ContainsKey(col.ColumnName) && selectedColumns[col.ColumnName])
-                                  .ToList();
-
-        if (!columnsToGenerate.Any())
+        var tableContextsForGeneration = new List<TableGenerationContext>();
+        foreach (var tableName in selectedTableNamesForGeneration)
         {
-             generatedCode = "// No columns are selected for code generation.";
+            // Use the injected CodeGenerationService instance name (CodeGenService)
+            string userAlias = tableAliases.TryGetValue(tableName, out var alias) && !string.IsNullOrWhiteSpace(alias) ? alias : CodeGenService.NormalizeClassName(tableName);
+
+            List<ColumnDetail> allColsForThisTable = allColumnsForSelectedTables.TryGetValue(tableName, out var cols) ? cols : new List<ColumnDetail>();
+            List<ColumnDetail> selectedColsForThisTable = new List<ColumnDetail>();
+
+            if (columnSelectionStates.TryGetValue(tableName, out var selections))
+            {
+                foreach (var colDetail in allColsForThisTable)
+                {
+                    if (selections.TryGetValue(colDetail.ColumnName, out var isSelected) && isSelected)
+                    {
+                        selectedColsForThisTable.Add(colDetail);
+                    }
+                }
+            }
+
+            if (!selectedColsForThisTable.Any())
+            {
+                generatedCode = $"Error: Table '{tableName}' ({userAlias}) is selected but has no columns selected for generation. Please select columns or deselect the table.";
+                multipleGeneratedCodeResults.Clear();
+                StateHasChanged();
+                return;
+            }
+
+            tableContextsForGeneration.Add(new TableGenerationContext
+            {
+                TableName = tableName,
+                UserAlias = userAlias,
+                ClassName = CodeGenService.NormalizeClassName(userAlias), // ClassName is normalized UserAlias
+                SelectedColumns = selectedColsForThisTable,
+                IsPrimaryInContext = (tableContextsForGeneration.Count == 0)
+            });
+        }
+
+        if (!tableContextsForGeneration.Any())
+        {
+            generatedCode = "No valid table contexts with selected columns were prepared for generation.";
+            StateHasChanged();
             return;
         }
 
-        generatedCode = CodeGenService.GenerateCode(currentSelectedTable, columnsToGenerate, snippetToUse);
-        await InvokeAsync(StateHasChanged);
+        foreach (var snippet in snippetsToGenerate)
+        {
+            string generatedOutput = CodeGenService.GenerateCode(
+                tableContextsForGeneration,
+                snippet,
+                currentNamespace ?? "",
+                currentProgramName ?? ""
+            );
+
+            multipleGeneratedCodeResults.Add(new Models.GeneratedCodeResult
+            {
+                SnippetName = snippet.Name,
+                GeneratedContent = generatedOutput,
+                SuggestedFileName = GenerateFileName(snippet, tableContextsForGeneration.FirstOrDefault()?.UserAlias, currentProgramName, currentNamespace)
+            });
+        }
+
+        if (multipleGeneratedCodeResults.Any())
+        {
+            generatedCode = $"// {multipleGeneratedCodeResults.Count} snippet(s) generated. Displaying in modal.";
+            isModalVisible = true;
+        }
+        else
+        {
+           generatedCode = "// No code was generated. Check selections.";
+        }
+        StateHasChanged();
     }
 
-    private async Task CopyToClipboard()
+    private string GenerateFileName(CodeSnippet snippet, string? baseNameFromTable, string? programName, string? namespaceVal)
     {
-        if (!string.IsNullOrEmpty(generatedCode))
-        {
-            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", generatedCode);
-            // Optionally, show a temporary message like "Copied!"
-        }
+        string baseName = string.IsNullOrWhiteSpace(baseNameFromTable) ? "Output" : baseNameFromTable;
+        string snippetNamePart = snippet.Name.Replace(" ", "").Replace("(", "").Replace(")", "").Replace("/", "-");
+        string extension = ".txt";
+        if (snippet.Name.Contains("C# Model", StringComparison.OrdinalIgnoreCase) || (snippet.Template.Contains("class ") && snippet.Template.Contains("namespace "))) extension = ".cs";
+        else if (snippet.Name.Contains("Razor", StringComparison.OrdinalIgnoreCase) || snippet.Name.Contains("Blazor", StringComparison.OrdinalIgnoreCase)) extension = ".razor";
+        else if (snippet.Name.Contains("XML", StringComparison.OrdinalIgnoreCase)) extension = ".xml";
+        else if (snippet.Name.Contains("JSON", StringComparison.OrdinalIgnoreCase)) extension = ".json";
+        return $"{baseName}_{snippetNamePart}{extension}";
     }
 
-    private async Task DownloadGeneratedCode()
+    private void CloseGeneratedCodeModal()
     {
-        if (string.IsNullOrEmpty(generatedCode) || generatedCode.StartsWith("//")) // Avoid downloading placeholder/error messages
-        {
-            // Optionally, inform the user that there's nothing valid to download
-            // For example, by setting a temporary status message
-            return;
-        }
-
-        var snippetToUse = availableSnippets.FirstOrDefault(s => s.Name == selectedSnippetName);
-        string fileName = "GeneratedCode.txt"; // Default filename
-
-        if (snippetToUse != null)
-        {
-            string baseName = string.IsNullOrEmpty(currentSelectedTable) ? "MyCode" : CodeGenService.NormalizeClassName(currentSelectedTable);
-            if (snippetToUse.Name.Contains("C# Model"))
-            {
-                fileName = $"{baseName}.cs";
-            }
-            else if (snippetToUse.Name.Contains("Blazor") || snippetToUse.Name.Contains("Razor"))
-            {
-                fileName = $"{baseName}Component.razor"; // Or derive more specifically
-            }
-            // Add more specific filename logic based on snippet type if desired
-        }
-
-        // Convert string to byte array
-        byte[] fileBytes = System.Text.Encoding.UTF8.GetBytes(generatedCode);
-
-        // Invoke JavaScript to trigger download
-        // Create a helper JS function if this becomes complex or repeated
-        // For a single use like this, direct invocation is fine.
-        var base64 = Convert.ToBase64String(fileBytes);
-        await JSRuntime.InvokeVoidAsync("saveAsFile", fileName, $"data:application/octet-stream;base64,{base64}");
+        isModalVisible = false;
+        StateHasChanged();
     }
 }
