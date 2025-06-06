@@ -29,16 +29,18 @@
                         <ul class="nav nav-tabs" id="generatedCodeTabs" role="tablist">
                             @for (int i = 0; i < Results.Count; i++)
                             {
-                                var result = Results[i];
-                                var tabId = $"tab-{i}";
+                                var capturedIndex = i; // Capture the loop variable
+                                var result = Results[capturedIndex];
+                                var tabId = $"tab-{capturedIndex}"; // Use capturedIndex for consistency
+
                                 <li class="nav-item" role="presentation">
-                                    <button class="nav-link @(i == activeTabIndex ? "active" : "")"
+                                    <button class="nav-link @(capturedIndex == activeTabIndex ? "active" : "")"
                                             id="@($"btn-{tabId}")"
                                             type="button"
                                             role="tab"
                                             aria-controls="@tabId"
-                                            aria-selected="@(i == activeTabIndex ? "true" : "false")"
-                                            @onclick="() => SetActiveTab(i)">
+                                            aria-selected="@(capturedIndex == activeTabIndex ? "true" : "false")"
+                                            @onclick="() => SetActiveTab(capturedIndex)">
                                         @result.SuggestedFileName
                                     </button>
                                 </li>
@@ -47,21 +49,23 @@
                         <div class="tab-content" id="generatedCodeTabsContent">
                             @for (int i = 0; i < Results.Count; i++)
                             {
-                                var result = Results[i];
-                                var tabId = $"tab-{i}";
-                                <div class="tab-pane fade @(i == activeTabIndex ? "show active" : "")"
+                                var capturedIndex = i; // Capture the loop variable for safety here too, though less critical for @bind
+                                var result = Results[capturedIndex];
+                                var tabId = $"tab-{capturedIndex}"; // Use capturedIndex for consistency
+
+                                <div class="tab-pane fade @(capturedIndex == activeTabIndex ? "show active" : "")"
                                      id="@tabId"
                                      role="tabpanel"
                                      aria-labelledby="@($"btn-{tabId}")">
                                     <div class="mt-2 p-2 border rounded">
                                         <div class="mb-2">
-                                            <label for="fileName_@i" class="form-label small">Filename:</label>
-                                            <input type="text" id="fileName_@i" class="form-control form-control-sm" @bind="currentFileNames[i]" />
+                                            <label for="fileName_@capturedIndex" class="form-label small">Filename:</label>
+                                            <input type="text" id="fileName_@capturedIndex" class="form-control form-control-sm" @bind="currentFileNames[capturedIndex]" />
                                         </div>
                                         <textarea class="form-control" rows="15" readonly>@result.GeneratedContent</textarea>
                                         <div class="mt-2">
                                             <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => CopyToClipboard(result.GeneratedContent)">Copy Active Tab</button>
-                                            <button class="btn btn-sm btn-primary" @onclick="() => DownloadFile(i)">Download Active Tab</button>
+                                            <button class="btn btn-sm btn-primary" @onclick="() => DownloadFile(capturedIndex)">Download Active Tab</button>
                                         </div>
                                     </div>
                                 </div>
