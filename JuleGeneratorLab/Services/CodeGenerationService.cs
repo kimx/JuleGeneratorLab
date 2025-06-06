@@ -11,11 +11,15 @@ namespace JuleGeneratorLab.Services
 {
     public class CodeGenerationService
     {
-        public string GenerateCode(string tableName, List<ColumnDetail> selectedColumns, CodeSnippet snippet, string namespaceValue, string programNameValue)
+        public string GenerateCode(List<TableGenerationContext> tableContexts, CodeSnippet snippet, string namespaceValue, string programNameValue)
         {
-            if (string.IsNullOrEmpty(tableName) || (selectedColumns == null || !selectedColumns.Any()) || snippet == null || string.IsNullOrWhiteSpace(snippet.Template))
+            if (tableContexts == null || !tableContexts.Any() || tableContexts.Any(tc => tc == null))
             {
-                return "// Error: Table name, columns, or snippet template not provided or empty.";
+                return "// Error: Table contexts list is null, empty, or contains null entries.";
+            }
+            if (snippet == null || string.IsNullOrWhiteSpace(snippet.Template))
+            {
+                return "// Error: Snippet or snippet template not provided or empty.";
             }
 
             try
@@ -29,23 +33,16 @@ namespace JuleGeneratorLab.Services
                 }
 
                 var scriptObject = new ScriptObject();
-                scriptObject.Add("TableName", tableName);
-                scriptObject.Add("ClassName", NormalizeClassName(tableName));
+                // Add the list of table contexts
+                scriptObject.Add("Tables", tableContexts);
+
+                // Add namespace and program name
                 scriptObject.Add("NameSpace", namespaceValue ?? "");
                 scriptObject.Add("ProgramName", programNameValue ?? "");
 
-                var columnList = new List<object>();
-                foreach (var col in selectedColumns)
-                {
-                    var colObj = new ScriptObject();
-                    colObj.Add("ColumnName", col.ColumnName);
-                    colObj.Add("DataType", col.DataType); // Original DB Data Type
-                    colObj.Add("IsPrimaryKey", col.IsPrimaryKey);
-                    colObj.Add("IsNullable", col.IsNullable);
-                    // CSharpDataType is now handled by the map_db_type_to_csharp function in the template
-                    columnList.Add(colObj);
-                }
-                scriptObject.Add("SelectedColumns", columnList);
+                // Note: Old TableName, ClassName, and SelectedColumns are removed from direct scriptObject addition.
+                // These are now accessible via the 'Tables' list, e.g., {{ Tables[0].ClassName }}
+                // The ClassName in each TableGenerationContext should be pre-normalized by the caller.
 
                 var context = new TemplateContext();
                 context.MemberRenamer = member => member.Name;

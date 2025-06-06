@@ -13,6 +13,8 @@ namespace JuleGeneratorLab.Models
 
         [Required(ErrorMessage = "Snippet template cannot be empty.")]
         public string Template { get; set; } = string.Empty;
+
+        public string SnippetType { get; set; } = "SingleTable"; // Default to "SingleTable" for existing snippets
         public bool IsUserDefined { get; set; } = false;
         // Optional: List of identified placeholders, could be populated during loading
         // public List<string> Placeholders { get; set; } = new List<string>();
