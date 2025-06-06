@@ -1,0 +1,8 @@
+[
+  {
+    "Name": "KimModel",
+    "Description": "Kim Test",
+    "Template": "public class {{ ClassName }}Model{\n{{ for col in SelectedColumns }}\n{{ if col.IsPrimaryKey }} (Primary Key){{ end }}\n  public {{ map_db_type_to_csharp col.DataType }} {{ normalize_property_name col.ColumnName }}{get;set}\n{{ end }}\n}",
+    "IsUserDefined": true
+  }
+]

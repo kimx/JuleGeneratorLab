@@ -1,0 +1,15 @@
+[
+  {
+    "Id": "098fb5a6-6c69-47a3-94c7-a1fc5aaeea12",
+    "Name": "Test Project",
+    "Namespace": "Test",
+    "Description": null,
+    "DatabaseConnectionId": "41490e77-c941-4bd5-ba11-a2ef002a5e38",
+    "SelectedSnippetSetIds": [
+      "5b104d60-4155-46eb-b3fa-f8e60ed3d6ff",
+      "4f2f3af2-0eec-40d7-a846-e051b46981a8"
+    ],
+    "CreatedAt": "2025-06-05T08:07:27.3633482Z",
+    "UpdatedAt": "2025-06-05T08:07:45.2939652Z"
+  }
+]
