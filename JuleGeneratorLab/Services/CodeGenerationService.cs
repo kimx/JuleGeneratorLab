@@ -11,11 +11,11 @@ namespace JuleGeneratorLab.Services
 {
     public class CodeGenerationService
     {
-        public string GenerateCode(List<TableGenerationContext> tableContexts, CodeSnippet snippet, string namespaceValue, string programNameValue)
+        public string GenerateCode(TableGenerationContext mainTableContext, CodeSnippet snippet, string namespaceValue, string programNameValue, TableGenerationContext? detailTableContext = null)
         {
-            if (tableContexts == null || !tableContexts.Any() || tableContexts.Any(tc => tc == null))
+            if (mainTableContext == null)
             {
-                return "// Error: Table contexts list is null, empty, or contains null entries.";
+                return "// Error: Main table context is null.";
             }
             if (snippet == null || string.IsNullOrWhiteSpace(snippet.Template))
             {
@@ -33,8 +33,23 @@ namespace JuleGeneratorLab.Services
                 }
 
                 var scriptObject = new ScriptObject();
-                // Add the list of table contexts
-                scriptObject.Add("Tables", tableContexts);
+                // Add the main table context
+                scriptObject.Add("MainTable", mainTableContext);
+
+                // Conditionally add the detail table context
+                if (detailTableContext != null)
+                {
+                    scriptObject.Add("DetailTable", detailTableContext);
+                }
+
+                // Reconstruct a Tables list for backward compatibility or general use
+                var tablesListForContext = new List<TableGenerationContext>();
+                tablesListForContext.Add(mainTableContext);
+                if (detailTableContext != null)
+                {
+                    tablesListForContext.Add(detailTableContext);
+                }
+                scriptObject.Add("Tables", tablesListForContext);
 
                 // Add namespace and program name
                 scriptObject.Add("NameSpace", namespaceValue ?? "");
