@@ -1,3 +1,4 @@
+using JuleGeneratorLab.Services;
 using System.Collections.Generic; // Required for List
 // Potentially: using JuleGeneratorLab.Models; if ColumnDetail is in a different namespace (it's in the same, Models)
 
