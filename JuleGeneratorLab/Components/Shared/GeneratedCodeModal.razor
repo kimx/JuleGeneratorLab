@@ -15,12 +15,13 @@
                     {
                         var singleResult = Results.First();
                         <div class="mb-2">
-                            <strong>File: @singleResult.SuggestedFileName</strong>
+                            <label for="singleFileName" class="form-label small">Filename:</label>
+                            <input type="text" id="singleFileName" class="form-control form-control-sm" @bind="currentFileNames[0]" />
                         </div>
                         <textarea class="form-control" rows="15" readonly>@singleResult.GeneratedContent</textarea>
                         <div class="mt-2">
                             <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => CopyToClipboard(singleResult.GeneratedContent)">Copy</button>
-                            <button class="btn btn-sm btn-primary" @onclick="() => DownloadFile(singleResult)">Download</button>
+                            <button class="btn btn-sm btn-primary" @onclick="() => DownloadFile(0)">Download</button>
                         </div>
                     }
                     else // Tabbed view for multiple results
@@ -30,7 +31,6 @@
                             {
                                 var result = Results[i];
                                 var tabId = $"tab-{i}";
-                                var index = i;
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link @(i == activeTabIndex ? "active" : "")"
                                             id="@($"btn-{tabId}")"
@@ -38,7 +38,7 @@
                                             role="tab"
                                             aria-controls="@tabId"
                                             aria-selected="@(i == activeTabIndex ? "true" : "false")"
-                                            @onclick="() => SetActiveTab(index)">
+                                            @onclick="() => SetActiveTab(i)">
                                         @result.SuggestedFileName
                                     </button>
                                 </li>
@@ -54,10 +54,14 @@
                                      role="tabpanel"
                                      aria-labelledby="@($"btn-{tabId}")">
                                     <div class="mt-2 p-2 border rounded">
+                                        <div class="mb-2">
+                                            <label for="fileName_@i" class="form-label small">Filename:</label>
+                                            <input type="text" id="fileName_@i" class="form-control form-control-sm" @bind="currentFileNames[i]" />
+                                        </div>
                                         <textarea class="form-control" rows="15" readonly>@result.GeneratedContent</textarea>
                                         <div class="mt-2">
                                             <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => CopyToClipboard(result.GeneratedContent)">Copy Active Tab</button>
-                                            <button class="btn btn-sm btn-primary" @onclick="() => DownloadFile(result)">Download Active Tab</button>
+                                            <button class="btn btn-sm btn-primary" @onclick="() => DownloadFile(i)">Download Active Tab</button>
                                         </div>
                                     </div>
                                 </div>
@@ -83,12 +87,19 @@
     [Parameter] public EventCallback OnClose { get; set; }
 
     private int activeTabIndex = 0;
+    private List<string> currentFileNames = new List<string>();
 
     protected override void OnParametersSet()
     {
         if (IsVisible && Results != null && Results.Any())
         {
-            activeTabIndex = 0; // Reset to first tab when modal becomes visible or results change
+            activeTabIndex = 0; // Existing logic
+            // Populate currentFileNames based on Results
+            currentFileNames = Results.Select(r => r.SuggestedFileName).ToList();
+        }
+        else
+        {
+            currentFileNames.Clear(); // Clear if no results or not visible
         }
     }
 
@@ -110,27 +121,35 @@
         }
     }
 
-    private async Task DownloadFile(Models.GeneratedCodeResult result)
+    private async Task DownloadFile(int index)
     {
-        if (string.IsNullOrEmpty(result.GeneratedContent)) return;
-        byte[] fileBytes = System.Text.Encoding.UTF8.GetBytes(result.GeneratedContent);
+        if (index < 0 || index >= Results.Count || index >= currentFileNames.Count) return;
+
+        string fileName = currentFileNames[index];
+        string content = Results[index].GeneratedContent;
+
+        if (string.IsNullOrEmpty(content) || string.IsNullOrEmpty(fileName)) return;
+        byte[] fileBytes = System.Text.Encoding.UTF8.GetBytes(content);
         var base64 = Convert.ToBase64String(fileBytes);
-        // Assumes 'saveAsFile' is globally available from wwwroot/js/textUtils.js
-        await JSRuntime.InvokeVoidAsync("saveAsFile", result.SuggestedFileName, $"data:application/octet-stream;base64,{base64}");
+        // Ensure saveAsFile JS function is available (it should be)
+        await JSRuntime.InvokeVoidAsync("saveAsFile", fileName, $"data:application/octet-stream;base64,{base64}");
     }
 
     private async Task DownloadAllAsZip()
     {
-        if (Results == null || !Results.Any())
+        if (Results == null || !Results.Any() || currentFileNames == null || currentFileNames.Count != Results.Count)
         {
-            await JSRuntime.InvokeVoidAsync("alert", "No files to zip.");
+            await JSRuntime.InvokeVoidAsync("alert", "No files to zip or filename data is inconsistent.");
             return;
         }
 
-        var filesToZip = Results.Select(r => new { name = r.SuggestedFileName, content = r.GeneratedContent }).ToList();
+        var filesToZip = Results.Select((result, index) => new
+        {
+            name = currentFileNames[index], // Use the potentially edited filename
+            content = result.GeneratedContent
+        }).ToList();
 
         string zipFileName = "GeneratedCode.zip";
-
         await JSRuntime.InvokeVoidAsync("createAndDownloadZip", filesToZip, zipFileName);
     }
 }
