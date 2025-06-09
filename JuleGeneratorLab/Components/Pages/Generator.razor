@@ -1,6 +1,7 @@
 @page "/generator"
 @using JuleGeneratorLab.Services
 @using JuleGeneratorLab.Models
+@using System.Text.RegularExpressions // Added this using directive
 @inject DatabaseSchemaReader DbSchemaReader
 @inject CodeSnippetService SnippetService
 @inject CodeGenerationService CodeGenService
@@ -152,18 +153,18 @@
                         <div class="mb-2">
                             <span class="me-2">Set role:</span>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="@($"role_{tableName}")" id="@($"role_{tableName}_Main")" value="Main" checked="@(mainTableName == tableName)" @onchange="() => SetTableRole(tableName, "Main")" />
-                                <label class="form-check-label" for="@($"role_{tableName}_Main")">Main</label>
+                                <input class="form-check-input" type="radio" name="@($"role_{SanitizeForHtmlId(tableName)}")" id="@($"role_{SanitizeForHtmlId(tableName)}_Main")" value="Main" checked="@(mainTableName == tableName)" @onchange="() => SetTableRole(tableName, "Main")" />
+                                <label class="form-check-label" for="@($"role_{SanitizeForHtmlId(tableName)}_Main")">Main</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="@($"role_{tableName}")" id="@($"role_{tableName}_Detail")" value="Detail" checked="@(detailTableName == tableName)" @onchange="() => SetTableRole(tableName, "Detail")" />
-                                <label class="form-check-label" for="@($"role_{tableName}_Detail")">Detail</label>
+                                <input class="form-check-input" type="radio" name="@($"role_{SanitizeForHtmlId(tableName)}")" id="@($"role_{SanitizeForHtmlId(tableName)}_Detail")" value="Detail" checked="@(detailTableName == tableName)" @onchange="() => SetTableRole(tableName, "Detail")" />
+                                <label class="form-check-label" for="@($"role_{SanitizeForHtmlId(tableName)}_Detail")">Detail</label>
                             </div>
                         </div>
                     }
                     <div class="mb-3">
-                        <label for="@($"alias_{tableName}")" class="form-label">Alias/ClassName:</label>
-                        <input type="text" id="@($"alias_{tableName}")" class="form-control form-control-sm"
+                        <label for="@($"alias_{SanitizeForHtmlId(tableName)}")" class="form-label">Alias/ClassName:</label>
+                        <input type="text" id="@($"alias_{SanitizeForHtmlId(tableName)}")" class="form-control form-control-sm"
                                @bind="tableAliases[tableName]" @bind:event="oninput" />
                     </div>
 
@@ -232,10 +233,10 @@
                 @foreach (var snippetSet in availableSnippetSetsForProject)
                 {
                     <div class="form-check" @key="snippetSet.Id">
-                        <input class="form-check-input" type="checkbox" id="@($"set_{snippetSet.Id}")"
+                        <input class="form-check-input" type="checkbox" id="@($"set_{SanitizeForHtmlId(snippetSet.Id.ToString())}")"
                                checked="@selectedSnippetSetIdsForGeneration.Contains(snippetSet.Id)"
                                @onchange="() => ToggleSnippetSetSelectionForGeneration(snippetSet.Id)">
-                        <label class="form-check-label" for="@($"set_{snippetSet.Id}")">@snippetSet.Name (@snippetSet.Description)</label>
+                        <label class="form-check-label" for="@($"set_{SanitizeForHtmlId(snippetSet.Id.ToString())}")">@snippetSet.Name (@snippetSet.Description)</label>
                     </div>
                 }
             }
@@ -251,7 +252,7 @@
                             <label class="list-group-item d-flex justify-content-between align-items-center" @key="snippet.Name">
                                 <span>
                                     <input type="checkbox" class="form-check-input me-2"
-                                           id="@($"snippet_{snippet.Name.Replace(" ", "")}")"
+                                           id="@($"snippet_{SanitizeForHtmlId(snippet.Name)}")"
                                            checked="@(individualSnippetSelectionState.ContainsKey(snippet.Name) ? individualSnippetSelectionState[snippet.Name] : false)"
                                            @onchange="() => ToggleIndividualSnippetSelection(snippet.Name)" />
                                     @snippet.Name
@@ -1069,5 +1070,24 @@
     {
         isModalVisible = false;
         StateHasChanged();
+    }
+
+    private string SanitizeForHtmlId(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            return string.Empty;
+        }
+        // Replace common problematic characters with underscore, ensure it starts with a letter or underscore.
+        var sanitized = System.Text.RegularExpressions.Regex.Replace(input, @"[^a-zA-Z0-9_.-]", "_");
+        if (sanitized.Length > 0 && !char.IsLetter(sanitized[0]) && sanitized[0] != '_')
+        {
+            sanitized = "_" + sanitized;
+        }
+        else if (sanitized.Length == 0)
+        {
+            return "_empty_"; // Or some other default for entirely invalid input
+        }
+        return sanitized;
     }
 }
