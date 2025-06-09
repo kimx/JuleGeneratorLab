@@ -47,6 +47,8 @@ else
             <tr>
                 <th>Name</th>
                 <th>Description</th>
+                <th>Applicability</th>
+                <th>Extension</th>
                 <th>Type</th>
                 <th>Actions</th>
             </tr>
@@ -61,6 +63,8 @@ else
                             @snippet.Description
                         </div>
                     </td>
+                    <td>@snippet.Applicability.ToString()</td>
+                    <td>@snippet.OutputFileExtension</td>
                     <td>
                         @if (snippet.IsUserDefined)
                         {
@@ -131,6 +135,27 @@ else
                                     <label for="snippetDescription" class="form-label">Description:</label>
                                     <InputTextArea id="snippetDescription" class="form-control" @bind-Value="currentEditSnippet.Description" rows="2" />
                                     <ValidationMessage For="@(() => currentEditSnippet.Description)" />
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="snippetApplicability" class="form-label">Applicability:</label>
+                                            <InputSelect id="snippetApplicability" class="form-select" @bind-Value="currentEditSnippet.Applicability">
+                                                @foreach (var appValue in Enum.GetValues(typeof(SnippetApplicability)))
+                                                {
+                                                    <option value="@appValue">@appValue.ToString()</option>
+                                                }
+                                            </InputSelect>
+                                            <ValidationMessage For="@(() => currentEditSnippet.Applicability)" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="outputFileExtension" class="form-label">Output File Extension:</label>
+                                            <InputText id="outputFileExtension" class="form-control" @bind-Value="currentEditSnippet.OutputFileExtension" placeholder=".cs, .txt, .razor" />
+                                            <ValidationMessage For="@(() => currentEditSnippet.OutputFileExtension)" />
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="snippetTemplate" class="form-label">Template:</label>
@@ -274,7 +299,15 @@ else
     private void ShowCreateForm()
     {
         originalSnippetNameForEdit = null; // Clear it for new snippet
-        currentEditSnippet = new CodeSnippet { IsUserDefined = true, Name = "New Snippet", Description = "A new user-defined snippet.", Template = "// Start your template here" };
+        currentEditSnippet = new CodeSnippet
+        {
+            IsUserDefined = true,
+            Name = "New Snippet",
+            Description = "A new user-defined snippet.",
+            Template = "// Start your template here",
+            Applicability = SnippetApplicability.Any,      // Initialize new property
+            OutputFileExtension = ".txt"                   // Initialize new property
+        };
         showEditOrCreateForm = true;
     }
 
@@ -286,7 +319,9 @@ else
             Name = snippetToEdit.Name,
             Description = snippetToEdit.Description,
             Template = snippetToEdit.Template,
-            IsUserDefined = snippetToEdit.IsUserDefined // Should be true
+            IsUserDefined = snippetToEdit.IsUserDefined, // Should be true
+            Applicability = snippetToEdit.Applicability,  // Copy existing value
+            OutputFileExtension = snippetToEdit.OutputFileExtension // Copy existing value
         };
         showEditOrCreateForm = true;
     }

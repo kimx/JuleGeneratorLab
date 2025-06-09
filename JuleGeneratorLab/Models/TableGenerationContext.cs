@@ -13,6 +13,5 @@ namespace JuleGeneratorLab.Models
 
         // Optional: Could be used by snippets to identify a 'main' or 'master' table in a list.
         // Default to false. UI/Logic in Generator.razor would set this if needed.
-        public bool IsPrimaryInContext { get; set; } = false;
     }
 }

@@ -1,6 +1,7 @@
 @page "/generator"
 @using JuleGeneratorLab.Services
 @using JuleGeneratorLab.Models
+@using System.Text.RegularExpressions // Added this using directive
 @inject DatabaseSchemaReader DbSchemaReader
 @inject CodeSnippetService SnippetService
 @inject CodeGenerationService CodeGenService
@@ -33,7 +34,7 @@
                             <option value="">-- Select a Project --</option>
                             @foreach (var proj in availableProjects)
                             {
-                                <option value="@proj.Id">@proj.Name</option>
+                                <option value="@proj.Id" @key="proj.Id">@proj.Name</option>
                             }
                         </InputSelect>
                     </div>
@@ -106,7 +107,7 @@
                 <div class="list-group" style="max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 4px;">
                     @foreach (var tableNameInList in tables)
                     {
-                        <label class="list-group-item">
+                        <label class="list-group-item" @key="tableNameInList">
                             <input type="checkbox" class="form-check-input me-1"
                                    checked="@(tableSelectionState.ContainsKey(tableNameInList) ? tableSelectionState[tableNameInList] : false)"
                                    @onchange="(ChangeEventArgs e) => ToggleTableSelection(tableNameInList, e.Value)" />
@@ -124,23 +125,46 @@
                 <p>Connect to a database to see tables.</p>
             }
 
-            <h4 class="mt-3">Configure Selected Tables:</h4>
+            <h4 class="mt-3">Configure Main/Detail Tables:</h4>
             @if (!string.IsNullOrEmpty(columnLoadingError))
             {
                 <div class="alert alert-danger">@columnLoadingError</div>
             }
-            @if (!selectedTableNamesForGeneration.Any())
+            @if (!selectedRawTableNames.Any())
             {
                 <p>No tables selected. Select tables above to configure them.</p>
             }
 
-            @foreach (var tableName in selectedTableNamesForGeneration)
+            @foreach (var tableName in selectedRawTableNames) // Iterate using renamed variable
             {
-                <div class="p-3 my-2 border rounded">
-                    <h5>Table: @tableName</h5>
+                <div class="p-3 my-2 border rounded" @key="tableName">
+                    <h5>
+                        Table: @tableName
+                        @if (mainTableName == tableName)
+                        {
+                            <span class="badge bg-primary ms-1">Main</span>
+                        }
+                        @if (detailTableName == tableName)
+                        {
+                            <span class="badge bg-secondary ms-1">Detail</span>
+                        }
+                    </h5>
+                    @if (selectedRawTableNames.Count == 2) {
+                        <div class="mb-2">
+                            <span class="me-2">Set role:</span>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="@($"role_{SanitizeForHtmlId(tableName)}")" id="@($"role_{SanitizeForHtmlId(tableName)}_Main")" value="Main" checked="@(mainTableName == tableName)" @onchange="@(() => SetTableRole(tableName, "Main"))" />
+                                <label class="form-check-label" for="@($"role_{SanitizeForHtmlId(tableName)}_Main")">Main</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="@($"role_{SanitizeForHtmlId(tableName)}")" id="@($"role_{SanitizeForHtmlId(tableName)}_Detail")" value="Detail" checked="@(detailTableName == tableName)" @onchange="@(() => SetTableRole(tableName, "Detail"))" />
+                                <label class="form-check-label" for="@($"role_{SanitizeForHtmlId(tableName)}_Detail")">Detail</label>
+                            </div>
+                        </div>
+                    }
                     <div class="mb-3">
-                        <label for="alias_@tableName" class="form-label">Alias/ClassName:</label>
-                        <input type="text" id="alias_@tableName" class="form-control form-control-sm"
+                        <label for="@($"alias_{SanitizeForHtmlId(tableName)}")" class="form-label">Alias/ClassName:</label>
+                        <input type="text" id="@($"alias_{SanitizeForHtmlId(tableName)}")" class="form-control form-control-sm"
                                @bind="tableAliases[tableName]" @bind:event="oninput" />
                     </div>
 
@@ -150,7 +174,7 @@
                         <div class="list-group mb-2" style="max-height: 250px; overflow-y: auto;">
                             @foreach (var column in columns)
                             {
-                                <label class="list-group-item small">
+                                <label class="list-group-item small" @key="column.ColumnName">
                                     <input type="checkbox" class="form-check-input me-1"
                                            checked="@(columnSelectionStates.ContainsKey(tableName) && columnSelectionStates[tableName].ContainsKey(column.ColumnName) ? columnSelectionStates[tableName][column.ColumnName] : false)"
                                            @onchange="(ChangeEventArgs e) => ToggleColumnSelectionForTable(tableName, column.ColumnName, e.Value)" />
@@ -208,11 +232,11 @@
                 <h5 class="mt-3">Select Project Snippet Sets:</h5>
                 @foreach (var snippetSet in availableSnippetSetsForProject)
                 {
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="set_@snippetSet.Id"
+                    <div class="form-check" @key="snippetSet.Id">
+                        <input class="form-check-input" type="checkbox" id="@($"set_{SanitizeForHtmlId(snippetSet.Id.ToString())}")"
                                checked="@selectedSnippetSetIdsForGeneration.Contains(snippetSet.Id)"
                                @onchange="() => ToggleSnippetSetSelectionForGeneration(snippetSet.Id)">
-                        <label class="form-check-label" for="set_@snippetSet.Id">@snippetSet.Name (@snippetSet.Description)</label>
+                        <label class="form-check-label" for="@($"set_{SanitizeForHtmlId(snippetSet.Id.ToString())}")">@snippetSet.Name (@snippetSet.Description)</label>
                     </div>
                 }
             }
@@ -221,14 +245,14 @@
             {
                 <h5 class="mt-3">Select Individual Snippets:</h5>
                 <div class="list-group mt-2" style="max-height: 300px; overflow-y: auto;">
-                    @if (availableSnippets.Any())
+                    @if (FilteredSnippets.Any()) // Use FilteredSnippets
                     {
-                        @foreach (var snippet in availableSnippets)
+                        @foreach (var snippet in FilteredSnippets) // Use FilteredSnippets
                         {
-                            <label class="list-group-item d-flex justify-content-between align-items-center">
+                            <label class="list-group-item d-flex justify-content-between align-items-center" @key="snippet.Name">
                                 <span>
                                     <input type="checkbox" class="form-check-input me-2"
-                                           id="snippet_@snippet.Name.Replace(" ", "")"
+                                           id="@($"snippet_{SanitizeForHtmlId(snippet.Name)}")"
                                            checked="@(individualSnippetSelectionState.ContainsKey(snippet.Name) ? individualSnippetSelectionState[snippet.Name] : false)"
                                            @onchange="() => ToggleIndividualSnippetSelection(snippet.Name)" />
                                     @snippet.Name
@@ -239,10 +263,10 @@
                     }
                     else
                     {
-                        <p class="list-group-item">No snippets available for selection.</p>
+                        <p class="list-group-item">No snippets available for selection based on current table/role configuration.</p>
                     }
                 </div>
-                @if (availableSnippets.Any())
+                @if (FilteredSnippets.Any()) // Use FilteredSnippets
                 {
                     <button class="btn btn-sm btn-outline-secondary mt-2 me-1" @onclick="() => SelectAllIndividualSnippets(true)">Select All</button>
                     <button class="btn btn-sm btn-outline-secondary mt-2" @onclick="() => SelectAllIndividualSnippets(false)">Deselect All</button>
@@ -284,8 +308,11 @@
     private string? projectLoadStatus;
     private bool isProjectLoaded = false;
 
-    private List<string> selectedTableNamesForGeneration = new List<string>();
+    private List<string> selectedRawTableNames = new List<string>(); // Renamed
     private Dictionary<string, bool> tableSelectionState = new Dictionary<string, bool>();
+    private string? mainTableName;
+    private string? detailTableName;
+    private Dictionary<string, string> tableRoles = new Dictionary<string, string>(); // Key: tableName, Value: "Main" or "Detail"
 
     private Dictionary<string, string> tableAliases = new Dictionary<string, string>();
     private Dictionary<string, List<ColumnDetail>> allColumnsForSelectedTables = new Dictionary<string, List<ColumnDetail>>();
@@ -304,12 +331,60 @@
     private bool isModalVisible = false;
     private string generatedCode = "// Select options and click 'Generate Code'.";
 
+    private List<CodeSnippet> FilteredSnippets
+    {
+        get
+        {
+            if (!isConnectionSuccess && !isProjectLoaded) // Not connected and no project means no table context
+            {
+                 // Show only 'Any' applicability snippets if nothing is loaded or connected yet.
+                 // Or, if you prefer to show all and let generation fail, return availableSnippets.
+                 // For a better UX, filtering by 'Any' makes sense.
+                return availableSnippets.Where(s => s.Applicability == SnippetApplicability.Any).ToList();
+            }
+
+            if (mainTableName != null && detailTableName != null) // Both Main and Detail selected
+            {
+                // Show snippets that can handle Main, Detail, or Any.
+                // This assumes a snippet marked "Main" could be the primary one for a Main/Detail pair,
+                // or a snippet marked "Detail" could be for the detail part.
+                // "Any" is versatile.
+                // A more complex scenario might involve snippet sets where one snippet is for Main and another for Detail,
+                // but individual snippet selection here assumes one snippet handles the chosen context.
+                return availableSnippets
+                    .Where(s => s.Applicability == SnippetApplicability.Any ||
+                                s.Applicability == SnippetApplicability.Main ||
+                                s.Applicability == SnippetApplicability.Detail)
+                                // This might be too broad. If a snippet is "Main" it might expect only a Main table.
+                                // A better approach for Main/Detail might be to only allow "Any" or a specific "MainDetail" type if it existed.
+                                // For now, this allows user to pick. Generation logic will use mainTable and detailTable.
+                    .ToList();
+            }
+            else if (mainTableName != null) // Only Main selected
+            {
+                return availableSnippets
+                    .Where(s => s.Applicability == SnippetApplicability.Any || s.Applicability == SnippetApplicability.Main)
+                    .ToList();
+            }
+            // If no tables are selected, or some other undefined state.
+            // Show all snippets, or only 'Any'. Let's default to all available if tables aren't specifically configured.
+            // However, if isConnectionSuccess or isProjectLoaded is true, but no tables are selected,
+            // it might be better to show 'Any' or an empty list.
+            // Given the current structure, if mainTableName is null, it implies no specific context.
+            return availableSnippets.Where(s => s.Applicability == SnippetApplicability.Any).ToList();
+            // Or return availableSnippets; to show all and let user figure out applicability.
+            // The above line (Any) is safer to guide the user.
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await SnippetService.EnsureInitializedAsync();
-        availableSnippets = SnippetService.Snippets.ToList();
+        availableSnippets = SnippetService.Snippets.ToList(); // Load all snippets initially
         individualSnippetSelectionState.Clear();
-        foreach (var snippet in availableSnippets)
+        // Initialize selection state for ALL snippets, not just filtered ones.
+        // The FilteredSnippets list is for display; selection state should be persistent.
+        foreach (var snippet in SnippetService.Snippets) // Use SnippetService.Snippets here
         {
             individualSnippetSelectionState[snippet.Name] = false;
         }
@@ -339,8 +414,11 @@
         isProjectLoaded = false;
         connectionStatus = null;
         tables.Clear();
-        selectedTableNamesForGeneration.Clear();
+        selectedRawTableNames.Clear(); // Renamed
         tableSelectionState.Clear();
+        mainTableName = null; // Clear new state
+        detailTableName = null; // Clear new state
+        tableRoles.Clear(); // Clear new state
         availableSnippetSetsForProject.Clear();
         selectedSnippetSetIdsForGeneration.Clear();
 
@@ -353,12 +431,23 @@
         {
             projectLoadStatus = "Switched to manual mode. All snippets available.";
             availableSnippets = SnippetService.Snippets.ToList();
+        // This loop for individualSnippetSelectionState is already above, ensure it uses the full list.
+        // The following was part of the original OnInitializedAsync, ensure it's correct.
+        // availableSnippets = SnippetService.Snippets.ToList(); //This is already done above.
+        // individualSnippetSelectionState.Clear(); // Already done.
+        // foreach (var snippet in availableSnippets) // Already done.
+        // {
+        //    individualSnippetSelectionState[snippet.Name] = false;
+        // }
+        snippetSelectionMode = "individual"; // Default mode
+            // When project is un-selected (manual mode)
+            availableSnippets = SnippetService.Snippets.ToList(); // Reset to all snippets
             individualSnippetSelectionState.Clear();
-            foreach (var snippet in availableSnippets)
+            foreach (var snippet in availableSnippets) // Reset selection state for all
             {
                 individualSnippetSelectionState[snippet.Name] = false;
             }
-            snippetSelectionMode = "individual";
+            snippetSelectionMode = "individual"; // Default to individual
             currentNamespace = "";
             currentProgramName = "";
             connectionStatus = "Manual mode. Please connect to a database.";
@@ -375,14 +464,17 @@
                     projectLoadStatus = "Failed to load selected project details.";
                     currentNamespace = "";
                     currentProgramName = "";
-                    snippetSelectionMode = "individual";
-                    availableSnippets = SnippetService.Snippets.ToList();
+                    snippetSelectionMode = "individual"; // Default
+                    availableSnippets = SnippetService.Snippets.ToList(); // Reset to all
                     individualSnippetSelectionState.Clear();
-                    foreach (var snippet in availableSnippets) { individualSnippetSelectionState[snippet.Name] = false; }
+                    foreach (var snippet in availableSnippets) { individualSnippetSelectionState[snippet.Name] = false; } // Reset selection state
                     availableSnippetSetsForProject.Clear();
                     selectedSnippetSetIdsForGeneration.Clear();
-                    selectedTableNamesForGeneration.Clear();
+                    selectedRawTableNames.Clear(); // Renamed
                     tableSelectionState.Clear();
+                    mainTableName = null; // Clear new state
+                    detailTableName = null; // Clear new state
+                    tableRoles.Clear(); // Clear new state
                     tableAliases.Clear();
                     allColumnsForSelectedTables.Clear();
                     columnSelectionStates.Clear();
@@ -408,8 +500,11 @@
                         {
                             projectLoadStatus += $" Its associated database connection (ID: {currentLoadedProject.DatabaseConnectionId.Value}) could not be found.";
                             tables.Clear();
-                            selectedTableNamesForGeneration.Clear();
+                            selectedRawTableNames.Clear(); // Renamed
                             tableSelectionState.Clear();
+                            mainTableName = null; // Clear new state
+                            detailTableName = null; // Clear new state
+                            tableRoles.Clear(); // Clear new state
                             tableAliases.Clear();
                             allColumnsForSelectedTables.Clear();
                             columnSelectionStates.Clear();
@@ -423,8 +518,11 @@
                     {
                         projectLoadStatus += " It does not have a database connection configured.";
                         tables.Clear();
-                        selectedTableNamesForGeneration.Clear();
+                        selectedRawTableNames.Clear(); // Renamed
                         tableSelectionState.Clear();
+                        mainTableName = null; // Clear new state
+                        detailTableName = null; // Clear new state
+                        tableRoles.Clear(); // Clear new state
                         tableAliases.Clear();
                         allColumnsForSelectedTables.Clear();
                         columnSelectionStates.Clear();
@@ -452,19 +550,22 @@
                         if (availableSnippetSetsForProject.Any())
                         {
                             snippetSelectionMode = "sets";
+                            // availableSnippets still holds ALL snippets. FilteredSnippets will use this.
+                            // No, for project load, availableSnippets itself should be filtered if sets are defined.
                             availableSnippets = allGlobalSnippets.Where(s => snippetNamesFromProjectSets.Contains(s.Name)).ToList();
                         }
                         else
                         {
                             snippetSelectionMode = "individual";
-                            availableSnippets = allGlobalSnippets;
+                            availableSnippets = allGlobalSnippets; // Show all if no sets defined for project
                         }
                     }
                     else
                     {
                         snippetSelectionMode = "individual";
-                        availableSnippets = allGlobalSnippets;
+                        availableSnippets = allGlobalSnippets; // Show all if project has no sets
                     }
+                    // Reset selection state based on the (potentially) newly filtered availableSnippets
                     individualSnippetSelectionState.Clear();
                     foreach (var snippet in availableSnippets) { individualSnippetSelectionState[snippet.Name] = false; }
                 }
@@ -473,13 +574,46 @@
             {
                 projectLoadStatus = $"Error loading project: {ex.Message}";
                 isProjectLoaded = false;
-                availableSnippets = SnippetService.Snippets.ToList();
+                availableSnippets = SnippetService.Snippets.ToList(); // Default to all snippets on error
                 currentNamespace = ""; currentProgramName = ""; snippetSelectionMode = "individual";
-                selectedTableNamesForGeneration.Clear(); tableSelectionState.Clear();
+                selectedRawTableNames.Clear(); tableSelectionState.Clear();
+                mainTableName = null; detailTableName = null; tableRoles.Clear();
                 tableAliases.Clear(); allColumnsForSelectedTables.Clear(); columnSelectionStates.Clear(); columnLoadingError = string.Empty;
                 await UpdateAndPruneSelectedTableContexts();
             }
         }
+        StateHasChanged();
+    }
+
+    private void SetTableRole(string tableNameToSet, string role)
+    {
+        if (!selectedRawTableNames.Contains(tableNameToSet) || selectedRawTableNames.Count != 2)
+        {
+            // Role setting is only applicable when exactly two tables are selected
+            // and the table to set is one of them.
+            return;
+        }
+
+        if (role == "Main")
+        {
+            if (mainTableName == tableNameToSet) return; // Already main, no change
+
+            mainTableName = tableNameToSet;
+            detailTableName = selectedRawTableNames.FirstOrDefault(t => t != mainTableName);
+        }
+        else if (role == "Detail")
+        {
+            if (detailTableName == tableNameToSet) return; // Already detail, no change
+
+            detailTableName = tableNameToSet;
+            mainTableName = selectedRawTableNames.FirstOrDefault(t => t != detailTableName);
+        }
+
+        // Update tableRoles dictionary
+        tableRoles.Clear();
+        if (mainTableName != null) tableRoles[mainTableName] = "Main";
+        if (detailTableName != null) tableRoles[detailTableName] = "Detail";
+
         StateHasChanged();
     }
 
@@ -504,8 +638,11 @@
         connectionStatus = "Connecting...";
         isConnectionSuccess = false;
         tables.Clear();
-        selectedTableNamesForGeneration.Clear();
+        selectedRawTableNames.Clear(); // Renamed
         tableSelectionState.Clear();
+        mainTableName = null; // Clear new state
+        detailTableName = null; // Clear new state
+        tableRoles.Clear(); // Clear new state
         tableAliases.Clear();
         allColumnsForSelectedTables.Clear();
         columnSelectionStates.Clear();
@@ -538,14 +675,14 @@
                 {
                     tableSelectionState[tableNameInListLoop] = false;
                 }
-                selectedTableNamesForGeneration.Clear();
+                selectedRawTableNames.Clear(); // Renamed
             }
             else
             {
                 connectionStatus = "Connected, but no user tables were found.";
                 isConnectionSuccess = true;
                 tableSelectionState.Clear();
-                selectedTableNamesForGeneration.Clear();
+                selectedRawTableNames.Clear(); // Renamed
             }
         }
         catch (Exception ex)
@@ -560,17 +697,25 @@
     private async Task UpdateAndPruneSelectedTableContexts()
     {
         columnLoadingError = string.Empty;
-        var currentSelection = selectedTableNamesForGeneration.ToHashSet();
+        // Use selectedRawTableNames for pruning and loading logic
+        var currentRawSelection = selectedRawTableNames.ToHashSet();
 
-        var tablesToRemove = allColumnsForSelectedTables.Keys.Where(t => !currentSelection.Contains(t)).ToList();
+        var tablesToRemove = allColumnsForSelectedTables.Keys.Where(t => !currentRawSelection.Contains(t)).ToList();
         foreach (var tableName in tablesToRemove)
         {
             allColumnsForSelectedTables.Remove(tableName);
             tableAliases.Remove(tableName);
             columnSelectionStates.Remove(tableName);
+            // Also remove from tableRoles if present
+            if (tableRoles.ContainsKey(tableName)) tableRoles.Remove(tableName);
         }
 
-        foreach (var tableName in selectedTableNamesForGeneration)
+        // If a table that was main or detail is no longer selected, nullify mainTableName/detailTableName
+        if (mainTableName != null && !currentRawSelection.Contains(mainTableName)) mainTableName = null;
+        if (detailTableName != null && !currentRawSelection.Contains(detailTableName)) detailTableName = null;
+
+
+        foreach (var tableName in selectedRawTableNames) // Iterate using renamed variable
         {
             if (!allColumnsForSelectedTables.ContainsKey(tableName))
             {
@@ -630,11 +775,64 @@
         {
             tableSelectionState[tableName] = isSelected;
         }
-        selectedTableNamesForGeneration = tableSelectionState
-                                            .Where(kvp => kvp.Value)
-                                            .Select(kvp => kvp.Key)
-                                            .OrderBy(name => name)
-                                            .ToList();
+
+        selectedRawTableNames = tableSelectionState // Update renamed variable
+                                .Where(kvp => kvp.Value)
+                                .Select(kvp => kvp.Key)
+                                .OrderBy(name => name)
+                                .ToList();
+
+        if (selectedRawTableNames.Count > 2)
+        {
+            // Max 2 tables allowed. Revert the last selection and show an error.
+            tableSelectionState[tableName] = !isSelected; // Revert
+            selectedRawTableNames = tableSelectionState // Recalculate
+                                    .Where(kvp => kvp.Value)
+                                    .Select(kvp => kvp.Key)
+                                    .OrderBy(name => name)
+                                    .ToList();
+            // TODO: Show a user-friendly error message via a new feedback variable
+            await JSRuntime.InvokeVoidAsync("alert", "You can select a maximum of two tables.");
+            StateHasChanged(); // Update UI if needed for the reverted checkbox
+            return;
+        }
+
+        tableRoles.Clear(); // Clear existing roles before re-assigning
+
+        if (selectedRawTableNames.Count == 1)
+        {
+            mainTableName = selectedRawTableNames.First();
+            detailTableName = null;
+            if (mainTableName != null) tableRoles[mainTableName] = "Main";
+        }
+        else if (selectedRawTableNames.Count == 2)
+        {
+            // If mainTableName is not among the selected, or was null, assign the first one as Main.
+            if (mainTableName == null || !selectedRawTableNames.Contains(mainTableName))
+            {
+                 mainTableName = selectedRawTableNames.First();
+            }
+            detailTableName = selectedRawTableNames.FirstOrDefault(t => t != mainTableName);
+
+            if (mainTableName != null) tableRoles[mainTableName] = "Main";
+            if (detailTableName != null) tableRoles[detailTableName] = "Detail";
+
+            // Ensure main and detail are not the same if something went wrong
+            if (mainTableName == detailTableName && mainTableName != null) {
+                // This case should ideally not be reached if selection logic is correct.
+                mainTableName = selectedRawTableNames[0];
+                detailTableName = selectedRawTableNames[1];
+                tableRoles.Clear();
+                tableRoles[mainTableName] = "Main";
+                tableRoles[detailTableName] = "Detail";
+            }
+        }
+        else // 0 selected
+        {
+            mainTableName = null;
+            detailTableName = null;
+        }
+
         await UpdateAndPruneSelectedTableContexts();
     }
 
@@ -688,9 +886,15 @@
 
     private void SelectAllIndividualSnippets(bool select)
     {
-        var snippetNames = availableSnippets.Select(s => s.Name).ToList();
+        // This should select/deselect based on FilteredSnippets, as those are the ones visible to the user.
+        var snippetNames = FilteredSnippets.Select(s => s.Name).ToList();
         foreach (var name in snippetNames)
-            individualSnippetSelectionState[name] = select;
+        {
+            if (individualSnippetSelectionState.ContainsKey(name))
+            {
+                individualSnippetSelectionState[name] = select;
+            }
+        }
         StateHasChanged();
     }
 
@@ -700,9 +904,9 @@
         isModalVisible = false;
         generatedCode = ""; // Clear previous status messages
 
-        if (!selectedTableNamesForGeneration.Any())
+        if (string.IsNullOrEmpty(mainTableName)) // Check mainTableName
         {
-            generatedCode = "Please select at least one table.";
+            generatedCode = "Please select a main table.";
             StateHasChanged();
             return;
         }
@@ -744,67 +948,93 @@
             return;
         }
 
-        var tableContextsForGeneration = new List<TableGenerationContext>();
-        foreach (var tableName in selectedTableNamesForGeneration)
+        // Prepare mainTableContext
+        if (mainTableName == null) { // This check is a bit redundant due to the one above, but good for safety
+            generatedCode = "Error: Main table is not set.";
+            StateHasChanged(); return;
+        }
+
+        string mainUserAlias = tableAliases.TryGetValue(mainTableName, out var mainAlias) && !string.IsNullOrWhiteSpace(mainAlias)
+                                ? mainAlias : CodeGenService.NormalizeClassName(mainTableName);
+        List<ColumnDetail> mainAllCols = allColumnsForSelectedTables.TryGetValue(mainTableName, out var mCols) ? mCols : new List<ColumnDetail>();
+        List<ColumnDetail> mainSelectedCols = new List<ColumnDetail>();
+        if (columnSelectionStates.TryGetValue(mainTableName, out var mainSelections))
         {
-            // Use the injected CodeGenerationService instance name (CodeGenService)
-            string userAlias = tableAliases.TryGetValue(tableName, out var alias) && !string.IsNullOrWhiteSpace(alias) ? alias : CodeGenService.NormalizeClassName(tableName);
-
-            List<ColumnDetail> allColsForThisTable = allColumnsForSelectedTables.TryGetValue(tableName, out var cols) ? cols : new List<ColumnDetail>();
-            List<ColumnDetail> selectedColsForThisTable = new List<ColumnDetail>();
-
-            if (columnSelectionStates.TryGetValue(tableName, out var selections))
+            foreach (var colDetail in mainAllCols)
             {
-                foreach (var colDetail in allColsForThisTable)
+                if (mainSelections.TryGetValue(colDetail.ColumnName, out var isSelected) && isSelected)
                 {
-                    if (selections.TryGetValue(colDetail.ColumnName, out var isSelected) && isSelected)
+                    mainSelectedCols.Add(colDetail);
+                }
+            }
+        }
+        if (!mainSelectedCols.Any())
+        {
+            generatedCode = $"Error: Main table '{mainTableName}' ({mainUserAlias}) has no columns selected.";
+            StateHasChanged(); return;
+        }
+        var mainTableContext = new TableGenerationContext
+        {
+            TableName = mainTableName,
+            UserAlias = mainUserAlias,
+            ClassName = CodeGenService.NormalizeClassName(mainUserAlias),
+            SelectedColumns = mainSelectedCols
+        };
+
+        TableGenerationContext? detailTableContext = null;
+        if (!string.IsNullOrEmpty(detailTableName))
+        {
+            string detailUserAlias = tableAliases.TryGetValue(detailTableName, out var detAlias) && !string.IsNullOrWhiteSpace(detAlias)
+                                     ? detAlias : CodeGenService.NormalizeClassName(detailTableName);
+            List<ColumnDetail> detailAllCols = allColumnsForSelectedTables.TryGetValue(detailTableName, out var dCols) ? dCols : new List<ColumnDetail>();
+            List<ColumnDetail> detailSelectedCols = new List<ColumnDetail>();
+            if (columnSelectionStates.TryGetValue(detailTableName, out var detailSelections))
+            {
+                foreach (var colDetail in detailAllCols)
+                {
+                    if (detailSelections.TryGetValue(colDetail.ColumnName, out var isSelected) && isSelected)
                     {
-                        selectedColsForThisTable.Add(colDetail);
+                        detailSelectedCols.Add(colDetail);
                     }
                 }
             }
-
-            if (!selectedColsForThisTable.Any())
+            if (!detailSelectedCols.Any())
             {
-                generatedCode = $"Error: Table '{tableName}' ({userAlias}) is selected but has no columns selected for generation. Please select columns or deselect the table.";
-                multipleGeneratedCodeResults.Clear();
-                StateHasChanged();
-                return;
+                generatedCode = $"Error: Detail table '{detailTableName}' ({detailUserAlias}) is selected but has no columns selected.";
+                StateHasChanged(); return;
             }
-
-            tableContextsForGeneration.Add(new TableGenerationContext
+            detailTableContext = new TableGenerationContext
             {
-                TableName = tableName,
-                UserAlias = userAlias,
-                ClassName = CodeGenService.NormalizeClassName(userAlias), // ClassName is normalized UserAlias
-                SelectedColumns = selectedColsForThisTable,
-                IsPrimaryInContext = (tableContextsForGeneration.Count == 0)
-            });
-        }
-
-        if (!tableContextsForGeneration.Any())
-        {
-            generatedCode = "No valid table contexts with selected columns were prepared for generation.";
-            StateHasChanged();
-            return;
+                TableName = detailTableName,
+                UserAlias = detailUserAlias,
+                ClassName = CodeGenService.NormalizeClassName(detailUserAlias),
+            SelectedColumns = detailSelectedCols
+            };
         }
 
         foreach (var snippet in snippetsToGenerate)
         {
+            string baseNameForFile = mainTableContext.UserAlias;
+
             string generatedOutput = CodeGenService.GenerateCode(
-                tableContextsForGeneration,
+                mainTableContext,
                 snippet,
                 currentNamespace ?? "",
-                currentProgramName ?? ""
+                currentProgramName ?? "",
+                detailTableContext
             );
 
             multipleGeneratedCodeResults.Add(new Models.GeneratedCodeResult
             {
                 SnippetName = snippet.Name,
                 GeneratedContent = generatedOutput,
-                SuggestedFileName = GenerateFileName(snippet, tableContextsForGeneration.FirstOrDefault()?.UserAlias, currentProgramName, currentNamespace)
+                SuggestedFileName = GenerateFileName(snippet, baseNameForFile, currentProgramName, currentNamespace)
             });
         }
+
+        // The remnant code block identified in the review has been removed.
+        // The logic now correctly concludes after populating multipleGeneratedCodeResults
+        // and then proceeds to the final status update.
 
         if (multipleGeneratedCodeResults.Any())
         {
@@ -822,11 +1052,17 @@
     {
         string baseName = string.IsNullOrWhiteSpace(baseNameFromTable) ? "Output" : baseNameFromTable;
         string snippetNamePart = snippet.Name.Replace(" ", "").Replace("(", "").Replace(")", "").Replace("/", "-");
-        string extension = ".txt";
-        if (snippet.Name.Contains("C# Model", StringComparison.OrdinalIgnoreCase) || (snippet.Template.Contains("class ") && snippet.Template.Contains("namespace "))) extension = ".cs";
-        else if (snippet.Name.Contains("Razor", StringComparison.OrdinalIgnoreCase) || snippet.Name.Contains("Blazor", StringComparison.OrdinalIgnoreCase)) extension = ".razor";
-        else if (snippet.Name.Contains("XML", StringComparison.OrdinalIgnoreCase)) extension = ".xml";
-        else if (snippet.Name.Contains("JSON", StringComparison.OrdinalIgnoreCase)) extension = ".json";
+        // Use OutputFileExtension from snippet model
+        string extension = snippet.OutputFileExtension;
+        // Ensure extension includes a dot, add if missing (though model should handle this)
+        if (!string.IsNullOrWhiteSpace(extension) && !extension.StartsWith("."))
+        {
+            extension = "." + extension;
+        }
+        else if (string.IsNullOrWhiteSpace(extension))
+        {
+            extension = ".txt"; // Fallback if not set
+        }
         return $"{baseName}_{snippetNamePart}{extension}";
     }
 
@@ -834,5 +1070,24 @@
     {
         isModalVisible = false;
         StateHasChanged();
+    }
+
+    private string SanitizeForHtmlId(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            return string.Empty;
+        }
+        // Replace common problematic characters with underscore, ensure it starts with a letter or underscore.
+        var sanitized = System.Text.RegularExpressions.Regex.Replace(input, @"[^a-zA-Z0-9_.-]", "_");
+        if (sanitized.Length > 0 && !char.IsLetter(sanitized[0]) && sanitized[0] != '_')
+        {
+            sanitized = "_" + sanitized;
+        }
+        else if (sanitized.Length == 0)
+        {
+            return "_empty_"; // Or some other default for entirely invalid input
+        }
+        return sanitized;
     }
 }
