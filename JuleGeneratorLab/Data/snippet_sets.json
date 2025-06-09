@@ -1,0 +1,27 @@
+[
+  {
+    "Id": "4f2f3af2-0eec-40d7-a846-e051b46981a8",
+    "Name": "Basic Program",
+    "Description": "b",
+    "SnippetNames": [
+      "Blazor EditForm Inputs (Scriban)",
+      "KimModel",
+      "Simple Console Output (Scriban)",
+      "C# Model Class (Scriban)",
+      "C# Get All Service Method (EF Core) (Scriban)"
+    ],
+    "CreatedAt": "2025-06-05T07:51:16.0840551Z",
+    "UpdatedAt": "2025-06-05T09:11:22.2046796Z"
+  },
+  {
+    "Id": "5b104d60-4155-46eb-b3fa-f8e60ed3d6ff",
+    "Name": "Adv Project",
+    "Description": "adv",
+    "SnippetNames": [
+      "KimModel",
+      "Simple Console Output (Scriban)"
+    ],
+    "CreatedAt": "2025-06-05T08:07:10.7504138Z",
+    "UpdatedAt": "2025-06-05T09:05:22.3018852Z"
+  }
+]
